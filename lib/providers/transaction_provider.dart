@@ -8,7 +8,7 @@ final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
 });
 
 final transactionsProvider =
-    FutureProvider.family<List<TransactionModel>, String>(
+    FutureProvider.family<List<TransactionModel>, int>(
   (ref, userId) async {
     final repo = ref.watch(transactionRepositoryProvider);
     return repo.getTransactions(userId);

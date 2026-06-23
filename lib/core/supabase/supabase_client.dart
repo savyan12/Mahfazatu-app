@@ -18,7 +18,7 @@ class SupabaseService {
     await Supabase.initialize(
       url: AppConstants.supabaseUrl,
       publishableKey: AppConstants.supabaseAnonKey,
-    );
+    ).timeout(const Duration(seconds: 15));
   }
 
   static SupabaseService get I => instance;

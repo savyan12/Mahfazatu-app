@@ -26,7 +26,7 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
   bool _loadingLocation = true;
   String _locationLabel = 'ليبيا - طرابلس';
   String _locationStatus = 'جارٍ تحديد الموقع الحالي...';
-  String? _selectedCategory;
+  String? _selectedServiceType;
 
   @override
   void initState() {
@@ -88,9 +88,9 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
 
   @override
   Widget build(BuildContext context) {
-    final merchantsAsync = _selectedCategory == null
+    final merchantsAsync = _selectedServiceType == null
         ? ref.watch(merchantsProvider)
-        : ref.watch(merchantsByCategoryProvider(_selectedCategory!));
+        : ref.watch(merchantsByServiceProvider(_selectedServiceType!));
 
     return Scaffold(
       body: SafeArea(
@@ -229,8 +229,8 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                     child: MarketplaceCategoryTile(
                       label: 'الكل',
                       icon: Icons.grid_view_rounded,
-                      active: _selectedCategory == null,
-                      onTap: () => setState(() => _selectedCategory = null),
+                      active: _selectedServiceType == null,
+                      onTap: () => setState(() => _selectedServiceType = null),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -238,9 +238,9 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                     child: MarketplaceCategoryTile(
                       label: 'تسوق',
                       icon: Icons.shopping_bag_outlined,
-                      active: _selectedCategory == 'shopping',
+                      active: _selectedServiceType == 'shopping',
                       onTap: () =>
-                          setState(() => _selectedCategory = 'shopping'),
+                          setState(() => _selectedServiceType = 'shopping'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -248,9 +248,9 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                     child: MarketplaceCategoryTile(
                       label: 'مطاعم',
                       icon: Icons.restaurant_outlined,
-                      active: _selectedCategory == 'restaurant',
+                      active: _selectedServiceType == 'restaurant',
                       onTap: () =>
-                          setState(() => _selectedCategory = 'restaurant'),
+                          setState(() => _selectedServiceType = 'restaurant'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -258,9 +258,9 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                     child: MarketplaceCategoryTile(
                       label: 'خدمات',
                       icon: Icons.work_outline_rounded,
-                      active: _selectedCategory == 'services',
+                      active: _selectedServiceType == 'services',
                       onTap: () =>
-                          setState(() => _selectedCategory = 'services'),
+                          setState(() => _selectedServiceType = 'services'),
                     ),
                   ),
                 ],
@@ -336,54 +336,44 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: MarketplaceStoreCard(
-            name: m.name,
-            category: _categoryName(m.category),
-            rating: m.rating.toStringAsFixed(1),
+            name: m.name ?? m.merchantCode,
+            category: _serviceTypeName(m.serviceType),
             distance:
                 '${_distanceTo(m.latitude, m.longitude).toStringAsFixed(1)} كم',
-            icon: _iconFromString(m.iconName),
-            accent: _colorFromHex(m.accentColor),
+            icon: _iconForService(m.serviceType),
+            accent: AppColors.mint,
           ),
         );
       }).toList(),
     );
   }
 
-  String _categoryName(MerchantCategory cat) {
-    switch (cat) {
-      case MerchantCategory.cafe:
+  String _serviceTypeName(String type) {
+    switch (type) {
+      case 'cafe':
         return 'مقهى';
-      case MerchantCategory.shopping:
+      case 'shopping':
         return 'تسوق';
-      case MerchantCategory.restaurant:
+      case 'restaurant':
         return 'مطعم';
-      case MerchantCategory.services:
+      case 'services':
         return 'خدمات';
+      default:
+        return type;
     }
   }
 
-  IconData _iconFromString(String name) {
-    switch (name) {
-      case 'local_cafe':
+  IconData _iconForService(String type) {
+    switch (type) {
+      case 'cafe':
         return Icons.local_cafe_outlined;
-      case 'shopping_cart':
+      case 'shopping':
         return Icons.shopping_cart_outlined;
       case 'restaurant':
         return Icons.restaurant_outlined;
-      case 'local_hospital':
-        return Icons.local_hospital_outlined;
-      case 'devices':
-        return Icons.devices_outlined;
-      case 'nightlight':
-        return Icons.nightlight_outlined;
       default:
         return Icons.store_outlined;
     }
-  }
-
-  Color _colorFromHex(String hex) {
-    hex = hex.replaceAll('#', '');
-    return Color(int.parse('FF$hex', radix: 16));
   }
 
   double _distanceTo(double latitude, double longitude) {

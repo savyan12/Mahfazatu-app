@@ -1,41 +1,49 @@
 import '../../core/supabase/supabase_client.dart';
-import '../models/offer_model.dart';
+import '../models/reward_model.dart';
+import '../models/user_reward_model.dart';
 
 class RewardRepository {
   final SupabaseService _supabase;
 
   RewardRepository(this._supabase);
 
-  Future<List<OfferModel>> getOffers({String? merchantId}) async {
+  Future<List<RewardModel>> getRewards({int? merchantId}) async {
     var query = _supabase.client
-        .from('offers')
+        .from('reward')
         .select()
         .eq('is_active', true);
 
-    if (merchantId != null && merchantId.isNotEmpty) {
+    if (merchantId != null) {
       query = query.eq('merchant_id', merchantId);
     }
 
-    final data = await query.order('points_required');
-    return data.map((json) => OfferModel.fromJson(json)).toList();
+    final data = await query.order('required_points');
+    return data.map((json) => RewardModel.fromJson(json)).toList();
   }
 
   Future<void> redeemPoints({
-    required String userId,
-    required String offerId,
+    required int userId,
+    required int rewardId,
   }) async {
-    await _supabase.client.rpc(
-      'redeem_points',
-      params: {'p_user_id': userId, 'p_offer_id': offerId},
-    );
+    final reward = await _supabase.client
+        .from('reward')
+        .select('required_points')
+        .eq('reward_id', rewardId)
+        .single();
+
+    await _supabase.client.from('user_reward').insert({
+      'user_id': userId,
+      'reward_id': rewardId,
+      'points_spent': reward['required_points'],
+    });
   }
 
-  Future<List<Map<String, dynamic>>> getRedemptions(String userId) async {
+  Future<List<UserRewardModel>> getRedemptions(int userId) async {
     final data = await _supabase.client
-        .from('reward_redemptions')
-        .select('*, offers(*)')
+        .from('user_reward')
+        .select()
         .eq('user_id', userId)
-        .order('created_at', ascending: false);
-    return data;
+        .order('redeemed_at', ascending: false);
+    return data.map((json) => UserRewardModel.fromJson(json)).toList();
   }
 }

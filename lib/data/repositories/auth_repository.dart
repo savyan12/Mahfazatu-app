@@ -16,28 +16,26 @@ class AuthRepository {
   Future<ProfileModel> signUp({
     required String email,
     required String password,
-    required String firstName,
-    required String lastName,
-    String? phone,
-    String? gender,
+    required String fullName,
+    String? phoneNumber,
+    String userType = 'customer',
   }) async {
     final response = await _client.auth.signUp(
       email: email,
       password: password,
       data: {
-        'first_name': firstName,
-        'last_name': lastName,
-        'phone': phone,
-        'gender': gender,
+        'name': fullName,
+        'phone_number': phoneNumber,
+        'user_type': userType,
       },
     );
     final user = response.user;
     if (user == null) throw Exception('Sign up failed');
 
     final profile = await _client
-        .from('profiles')
+        .from('profile')
         .select()
-        .eq('id', user.id)
+        .eq('auth_uid', user.id)
         .single();
     return ProfileModel.fromJson(profile);
   }
@@ -54,9 +52,9 @@ class AuthRepository {
     if (user == null) throw Exception('Invalid credentials');
 
     final profile = await _client
-        .from('profiles')
+        .from('profile')
         .select()
-        .eq('id', user.id)
+        .eq('auth_uid', user.id)
         .single();
     return ProfileModel.fromJson(profile);
   }

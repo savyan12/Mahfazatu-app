@@ -1,84 +1,49 @@
 class ProfileModel {
-  final String id;
-  final String email;
-  final String? phone;
-  final String firstName;
-  final String lastName;
-  final String? gender;
-  final String? avatarUrl;
-  final double balance;
-  final int rewardPoints;
+  final int userId;
+  final String authUid;
+  final String name;
+  final String phoneNumber;
+  final String userType;
   final DateTime createdAt;
-  final DateTime updatedAt;
 
   ProfileModel({
-    required this.id,
-    required this.email,
-    this.phone,
-    this.firstName = '',
-    this.lastName = '',
-    this.gender,
-    this.avatarUrl,
-    this.balance = 0.0,
-    this.rewardPoints = 0,
+    required this.userId,
+    required this.authUid,
+    this.name = '',
+    this.phoneNumber = '',
+    this.userType = 'customer',
     required this.createdAt,
-    required this.updatedAt,
   });
 
-  String get fullName => '$firstName $lastName';
+  bool get isMerchant => userType == 'merchant';
+  bool get isCustomer => userType == 'customer';
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
     return ProfileModel(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      phone: json['phone'] as String?,
-      firstName: (json['first_name'] as String?) ?? '',
-      lastName: (json['last_name'] as String?) ?? '',
-      gender: json['gender'] as String?,
-      avatarUrl: json['avatar_url'] as String?,
-      balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
-      rewardPoints: (json['reward_points'] as int?) ?? 0,
+      userId: json['user_id'] as int,
+      authUid: json['auth_uid'] as String,
+      name: (json['name'] as String?) ?? '',
+      phoneNumber: (json['phone_number'] as String?) ?? '',
+      userType: (json['user_type'] as String?) ?? 'customer',
       createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'email': email,
-      'phone': phone,
-      'first_name': firstName,
-      'last_name': lastName,
-      'gender': gender,
-      'avatar_url': avatarUrl,
-      'balance': balance,
-      'reward_points': rewardPoints,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'user_id': userId,
+    'auth_uid': authUid,
+    'name': name,
+    'phone_number': phoneNumber,
+    'user_type': userType,
+    'created_at': createdAt.toIso8601String(),
+  };
 
-  ProfileModel copyWith({
-    String? firstName,
-    String? lastName,
-    String? gender,
-    String? avatarUrl,
-    double? balance,
-    int? rewardPoints,
-  }) {
-    return ProfileModel(
-      id: id,
-      email: email,
-      phone: phone,
-      firstName: firstName ?? this.firstName,
-      lastName: lastName ?? this.lastName,
-      gender: gender ?? this.gender,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      balance: balance ?? this.balance,
-      rewardPoints: rewardPoints ?? this.rewardPoints,
-      createdAt: createdAt,
-      updatedAt: updatedAt,
-    );
-  }
+  ProfileModel copyWith({String? name, String? phoneNumber}) => ProfileModel(
+    userId: userId,
+    authUid: authUid,
+    name: name ?? this.name,
+    phoneNumber: phoneNumber ?? this.phoneNumber,
+    userType: userType,
+    createdAt: createdAt,
+  );
 }

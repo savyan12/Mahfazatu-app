@@ -10,7 +10,7 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final greeting = _getGreeting();
-    final name = profile?.firstName ?? 'سفيان';
+    final name = profile?.name.isNotEmpty == true ? profile!.name : 'سفيان';
 
     return Row(
       textDirection: TextDirection.ltr,

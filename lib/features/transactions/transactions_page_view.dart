@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/supabase/supabase_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/transaction_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/transaction_provider.dart';
 import 'filter_chip_label.dart';
 import 'summary_card.dart';
@@ -16,8 +17,11 @@ class TransactionsPageView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = SupabaseService.I.auth.currentUser;
-    final userId = user?.id ?? '';
-    final transactionsAsync = ref.watch(transactionsProvider(userId));
+    final userIdAsync = ref.watch(currentUserIdProvider);
+
+    if (user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -90,15 +94,14 @@ class TransactionsPageView extends ConsumerWidget {
                 runSpacing: 8,
                 children: const [
                   FilterChipLabel(label: 'الكل', active: true),
-                  FilterChipLabel(label: 'شحن'),
                   FilterChipLabel(label: 'تحويل'),
                   FilterChipLabel(label: 'شراء'),
-                  FilterChipLabel(label: 'استبدال نقاط'),
                 ],
               ),
               const SizedBox(height: 18),
-              transactionsAsync.when(
-                data: (txns) => _buildTransactionList(txns),
+              userIdAsync.when(
+                data: (userId) =>
+                    _TransactionList(userId: userId),
                 loading: () => const Center(
                   child: Padding(
                     padding: EdgeInsets.all(32),
@@ -120,11 +123,38 @@ class TransactionsPageView extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _TransactionList extends ConsumerWidget {
+  final int userId;
+  const _TransactionList({required this.userId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final transactionsAsync = ref.watch(transactionsProvider(userId));
+    return transactionsAsync.when(
+      data: (txns) => _buildTransactionList(txns),
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (_, _) => const Padding(
+        padding: EdgeInsets.all(32),
+        child: Text(
+          'حدث خطأ في تحميل المعاملات',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.danger),
+        ),
+      ),
+    );
+  }
 
   Widget _buildTransactionList(List<TransactionModel> txns) {
     if (txns.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.all(32),
+        padding: EdgeInsets.all(24),
         child: Text(
           'لا توجد معاملات بعد',
           textAlign: TextAlign.center,
@@ -148,8 +178,8 @@ class TransactionsPageView extends ConsumerWidget {
     List<TransactionModel> olderTxns = [];
 
     for (final txn in txns) {
-      final isToday = _isSameDay(txn.createdAt, today);
-      final isYesterday = _isSameDay(txn.createdAt, yesterday);
+      final isToday = _isSameDay(txn.transactionDate, today);
+      final isYesterday = _isSameDay(txn.transactionDate, yesterday);
 
       if (isToday) {
         todayTxns.add(txn);
@@ -159,7 +189,7 @@ class TransactionsPageView extends ConsumerWidget {
         olderTxns.add(txn);
       }
 
-      if (txn.type == TransactionType.topup) {
+      if (txn.transactionType == TransactionType.transfer) {
         totalIncome += txn.amount;
       } else {
         totalExpense += txn.amount;
@@ -230,41 +260,33 @@ class TransactionsPageView extends ConsumerWidget {
   }
 
   Widget _buildTransactionCard(TransactionModel txn) {
-    final isPositive = txn.type == TransactionType.topup;
+    final isPositive = txn.transactionType == TransactionType.transfer;
     return TransactionCard(
-      title: _titleForType(txn.type),
-      subtitle: txn.description ?? '',
+      title: _titleForType(txn.transactionType),
+      subtitle: txn.notes ?? '',
       amount:
-          '${isPositive ? '+' : '-'} ${txn.amount.toStringAsFixed(0)} ${txn.currency}',
-      time: '${txn.createdAt.hour.toString().padLeft(2, '0')}:${txn.createdAt.minute.toString().padLeft(2, '0')}',
-      icon: _iconForType(txn.type),
+          '${isPositive ? '+' : '-'} ${txn.amount.toStringAsFixed(0)} LYD',
+      time: '${txn.transactionDate.hour.toString().padLeft(2, '0')}:${txn.transactionDate.minute.toString().padLeft(2, '0')}',
+      icon: _iconForType(txn.transactionType),
       positive: isPositive,
     );
   }
 
   String _titleForType(TransactionType type) {
     switch (type) {
-      case TransactionType.topup:
-        return 'شحن محفظة';
       case TransactionType.transfer:
         return 'تحويل مالي';
       case TransactionType.payment:
         return 'عملية شراء';
-      case TransactionType.redeem:
-        return 'استبدال نقاط';
     }
   }
 
   IconData _iconForType(TransactionType type) {
     switch (type) {
-      case TransactionType.topup:
-        return Icons.outbox_rounded;
       case TransactionType.transfer:
         return Icons.swap_horiz_rounded;
       case TransactionType.payment:
         return Icons.shopping_cart_outlined;
-      case TransactionType.redeem:
-        return Icons.hexagon_outlined;
     }
   }
 

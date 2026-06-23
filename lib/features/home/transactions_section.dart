@@ -45,16 +45,16 @@ class TransactionsSection extends StatelessWidget {
           )
         else
           ...transactions.map((txn) {
-            final isPositive = txn.type == TransactionType.topup;
+            final isPositive = txn.transactionType == TransactionType.transfer;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: TransactionRow(
-                title: txn.description ?? txn.type.name,
-                subtitle: _formatDate(txn.createdAt),
+                title: txn.notes ?? txn.transactionType.name,
+                subtitle: _formatDate(txn.transactionDate),
                 amount:
-                    '${isPositive ? '+' : '-'} ${txn.amount.toStringAsFixed(0)} ${txn.currency}',
+                    '${isPositive ? '+' : '-'} ${txn.amount.toStringAsFixed(0)} LYD',
                 positive: isPositive,
-                icon: _iconForType(txn.type),
+                icon: _iconForType(txn.transactionType),
               ),
             );
           }),
@@ -64,14 +64,10 @@ class TransactionsSection extends StatelessWidget {
 
   IconData _iconForType(TransactionType type) {
     switch (type) {
-      case TransactionType.topup:
-        return Icons.outbox_rounded;
       case TransactionType.transfer:
         return Icons.swap_horiz_rounded;
       case TransactionType.payment:
         return Icons.shopping_cart_outlined;
-      case TransactionType.redeem:
-        return Icons.hexagon_outlined;
     }
   }
 

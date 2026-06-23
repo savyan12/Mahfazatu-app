@@ -6,36 +6,37 @@ class ProfileRepository {
 
   ProfileRepository(this._supabase);
 
-  Future<ProfileModel> getProfile(String userId) async {
+  Future<ProfileModel> getProfile(String authUid) async {
     final data = await _supabase.client
-        .from('profiles')
+        .from('profile')
         .select()
-        .eq('id', userId)
+        .eq('auth_uid', authUid)
+        .single();
+    return ProfileModel.fromJson(data);
+  }
+
+  Future<ProfileModel> getProfileByUserId(int userId) async {
+    final data = await _supabase.client
+        .from('profile')
+        .select()
+        .eq('user_id', userId)
         .single();
     return ProfileModel.fromJson(data);
   }
 
   Future<ProfileModel> updateProfile({
-    required String userId,
-    String? firstName,
-    String? lastName,
-    String? phone,
-    String? gender,
-    String? avatarUrl,
+    required int userId,
+    String? name,
+    String? phoneNumber,
   }) async {
-    final updates = <String, dynamic>{
-      'updated_at': DateTime.now().toIso8601String(),
-    };
-    if (firstName != null) updates['first_name'] = firstName;
-    if (lastName != null) updates['last_name'] = lastName;
-    if (phone != null) updates['phone'] = phone;
-    if (gender != null) updates['gender'] = gender;
-    if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
+    final updates = <String, dynamic>{};
+    if (name != null) updates['name'] = name;
+    if (phoneNumber != null) updates['phone_number'] = phoneNumber;
 
     final data = await _supabase.client
-        .from('profiles')
+        .from('profile')
         .update(updates)
-        .eq('id', userId)
+        .eq('user_id', userId)
         .select()
         .single();
     return ProfileModel.fromJson(data);

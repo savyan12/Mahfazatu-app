@@ -7,15 +7,16 @@ final merchantRepositoryProvider = Provider<MerchantRepository>((ref) {
   return MerchantRepository(SupabaseService.I);
 });
 
-final merchantsProvider = FutureProvider<List<MerchantModel>>((ref) async {
+final merchantsProvider =
+    FutureProvider<List<MerchantModel>>((ref) async {
   final repo = ref.watch(merchantRepositoryProvider);
   return repo.getMerchants();
 });
 
-final merchantsByCategoryProvider =
+final merchantsByServiceProvider =
     FutureProvider.family<List<MerchantModel>, String>(
-  (ref, category) async {
+  (ref, serviceType) async {
     final repo = ref.watch(merchantRepositoryProvider);
-    return repo.getMerchants(category: category);
+    return repo.getMerchants(serviceType: serviceType);
   },
 );

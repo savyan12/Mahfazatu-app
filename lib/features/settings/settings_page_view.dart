@@ -63,8 +63,8 @@ class _SettingsPageViewState extends ConsumerState<SettingsPageView> {
   @override
   Widget build(BuildContext context) {
     final user = SupabaseService.I.auth.currentUser;
-    final userId = user?.id ?? '';
-    final profileAsync = ref.watch(profileProvider(userId));
+    final authUid = user?.id ?? '';
+    final profileAsync = ref.watch(profileProvider(authUid));
 
     return Scaffold(
       body: AppBackground.dark(
@@ -115,8 +115,8 @@ class _SettingsPageViewState extends ConsumerState<SettingsPageView> {
                 ),
                 const SizedBox(height: 18),
                 profileAsync.when(
-                  data: (profile) => _buildProfileCard(profile.fullName,
-                      profile.email, profile.phone ?? ''),
+                  data: (profile) => _buildProfileCard(
+                      profile.name, user?.email ?? '', profile.phoneNumber),
                   loading: () => _buildProfileCard('...', '...', '...'),
                   error: (_, _) =>
                       _buildProfileCard(user?.email ?? '', user?.email ?? '', ''),

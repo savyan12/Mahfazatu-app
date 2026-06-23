@@ -6,7 +6,7 @@ class MarketplaceStoreCard extends StatelessWidget {
   const MarketplaceStoreCard({
     required this.name,
     required this.category,
-    required this.rating,
+    this.rating,
     required this.distance,
     required this.icon,
     required this.accent,
@@ -15,7 +15,7 @@ class MarketplaceStoreCard extends StatelessWidget {
 
   final String name;
   final String category;
-  final String rating;
+  final String? rating;
   final String distance;
   final IconData icon;
   final Color accent;
@@ -68,14 +68,15 @@ class MarketplaceStoreCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      rating,
-                      style: const TextStyle(
-                        color: AppColors.mint,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                    if (rating != null)
+                      Text(
+                        rating!,
+                        style: const TextStyle(
+                          color: AppColors.mint,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
                     Text(
                       distance,
                       style: const TextStyle(

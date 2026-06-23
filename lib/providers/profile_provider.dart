@@ -8,7 +8,7 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
 });
 
 final profileProvider =
-    FutureProvider.family<ProfileModel, String>((ref, userId) async {
+    FutureProvider.family<ProfileModel, String>((ref, authUid) async {
   final repo = ref.watch(profileRepositoryProvider);
-  return repo.getProfile(userId);
+  return repo.getProfile(authUid);
 });

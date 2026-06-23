@@ -174,10 +174,8 @@ class _SubmitButtonState extends ConsumerState<_SubmitButton> {
       await repo.signUp(
         email: args['email'] as String,
         password: args['password'] as String,
-        firstName: args['firstName'] as String,
-        lastName: args['lastName'] as String,
-        phone: args['phone'] as String?,
-        gender: args['gender'] as String?,
+        fullName: args['fullName'] as String,
+        phoneNumber: args['phone'] as String?,
       );
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);

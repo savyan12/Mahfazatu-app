@@ -1,31 +1,40 @@
 import '../../core/supabase/supabase_client.dart';
 import '../models/merchant_model.dart';
+import '../models/branch_model.dart';
 
 class MerchantRepository {
   final SupabaseService _supabase;
 
   MerchantRepository(this._supabase);
 
-  Future<List<MerchantModel>> getMerchants({String? category}) async {
+  Future<List<MerchantModel>> getMerchants({String? serviceType}) async {
     var query = _supabase.client
-        .from('merchants')
-        .select()
-        .eq('is_active', true);
+        .from('merchant')
+        .select('*, profile!inner(name)');
 
-    if (category != null && category.isNotEmpty) {
-      query = query.eq('category', category);
+    if (serviceType != null && serviceType.isNotEmpty) {
+      query = query.eq('service_type', serviceType);
     }
 
-    final data = await query.order('name');
+    final data = await query.order('merchant_code');
     return data.map((json) => MerchantModel.fromJson(json)).toList();
   }
 
-  Future<MerchantModel> getMerchant(String id) async {
+  Future<MerchantModel> getMerchant(int userId) async {
     final data = await _supabase.client
-        .from('merchants')
+        .from('merchant')
         .select()
-        .eq('id', id)
+        .eq('user_id', userId)
         .single();
     return MerchantModel.fromJson(data);
+  }
+
+  Future<List<BranchModel>> getBranches(int merchantId) async {
+    final data = await _supabase.client
+        .from('branch')
+        .select()
+        .eq('merchant_id', merchantId)
+        .eq('is_active', true);
+    return data.map((json) => BranchModel.fromJson(json)).toList();
   }
 }

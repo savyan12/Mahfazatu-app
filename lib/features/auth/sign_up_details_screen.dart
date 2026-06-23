@@ -14,21 +14,18 @@ class SignUpDetailsScreen extends StatefulWidget {
 }
 
 class _SignUpDetailsScreenState extends State<SignUpDetailsScreen> {
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
+  final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
-  Gender _selectedGender = Gender.male;
   String? _error;
 
   @override
   void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
+    _fullNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -37,14 +34,13 @@ class _SignUpDetailsScreenState extends State<SignUpDetailsScreen> {
   }
 
   void _goToIdentity() {
-    final firstName = _firstNameController.text.trim();
-    final lastName = _lastNameController.text.trim();
+    final fullName = _fullNameController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
 
-    if (firstName.isEmpty || lastName.isEmpty || email.isEmpty) {
+    if (fullName.isEmpty || email.isEmpty) {
       setState(() => _error = 'يرجى ملء جميع الحقول المطلوبة');
       return;
     }
@@ -60,12 +56,10 @@ class _SignUpDetailsScreenState extends State<SignUpDetailsScreen> {
     Navigator.of(context).pushNamed(
       SignUpIdentityScreen.routeName,
       arguments: {
-        'firstName': firstName,
-        'lastName': lastName,
+        'fullName': fullName,
         'email': email,
         'phone': phone,
         'password': password,
-        'gender': _selectedGender == Gender.male ? 'male' : 'female',
       },
     );
   }
@@ -85,25 +79,10 @@ class _SignUpDetailsScreenState extends State<SignUpDetailsScreen> {
           const SizedBox(height: 28),
           const StepProgress(currentStep: 1),
           const SizedBox(height: 30),
-          Row(
-            textDirection: TextDirection.ltr,
-            children: [
-              Expanded(
-                child: AuthField(
-                  hintText: 'الاسم الأخير',
-                  icon: Icons.person_outline_rounded,
-                  controller: _lastNameController,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: AuthField(
-                  hintText: 'الاسم الأول',
-                  icon: Icons.person_outline_rounded,
-                  controller: _firstNameController,
-                ),
-              ),
-            ],
+          AuthField(
+            hintText: 'الاسم الكامل',
+            icon: Icons.person_outline_rounded,
+            controller: _fullNameController,
           ),
           const SizedBox(height: 16),
           AuthField(
@@ -146,15 +125,6 @@ class _SignUpDetailsScreenState extends State<SignUpDetailsScreen> {
             onTrailingTap: () {
               setState(() {
                 _confirmPasswordVisible = !_confirmPasswordVisible;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          GenderSelector(
-            selectedGender: _selectedGender,
-            onChanged: (gender) {
-              setState(() {
-                _selectedGender = gender;
               });
             },
           ),

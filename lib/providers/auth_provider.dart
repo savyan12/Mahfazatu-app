@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/supabase/supabase_client.dart';
 import '../data/models/profile_model.dart';
 import '../data/repositories/auth_repository.dart';
+import 'profile_provider.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(SupabaseService.I);
@@ -16,7 +17,16 @@ final currentUserProvider = Provider<User?>((ref) {
   return SupabaseService.I.auth.currentUser;
 });
 
+
 final authLoadingProvider = StateProvider<bool>((ref) => false);
+
+final currentUserIdProvider = FutureProvider<int>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) throw Exception('Not authenticated');
+  final repo = ref.watch(profileRepositoryProvider);
+  final profile = await repo.getProfile(user.id);
+  return profile.userId;
+});
 
 final signInProvider = FutureProvider.family<ProfileModel, SignInParams>(
   (ref, params) async {
@@ -31,10 +41,9 @@ final signUpProvider = FutureProvider.family<ProfileModel, SignUpParams>(
     return repo.signUp(
       email: params.email,
       password: params.password,
-      firstName: params.firstName,
-      lastName: params.lastName,
-      phone: params.phone,
-      gender: params.gender,
+      fullName: params.fullName,
+      phoneNumber: params.phoneNumber,
+      userType: params.userType,
     );
   },
 );
@@ -48,16 +57,14 @@ class SignInParams {
 class SignUpParams {
   final String email;
   final String password;
-  final String firstName;
-  final String lastName;
-  final String? phone;
-  final String? gender;
+  final String fullName;
+  final String? phoneNumber;
+  final String userType;
   SignUpParams({
     required this.email,
     required this.password,
-    required this.firstName,
-    required this.lastName,
-    this.phone,
-    this.gender,
+    required this.fullName,
+    this.phoneNumber,
+    this.userType = 'customer',
   });
 }

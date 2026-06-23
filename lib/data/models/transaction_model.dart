@@ -1,79 +1,73 @@
-enum TransactionType { topup, transfer, payment, redeem }
+enum TransactionType { transfer, payment }
+enum PaymentMethod { nfc, qr, direct }
 enum TransactionStatus { pending, completed, failed }
 
 class TransactionModel {
-  final String id;
-  final String userId;
-  final TransactionType type;
+  final int transactionId;
+  final int senderWalletId;
+  final int receiverWalletId;
+  final TransactionType transactionType;
   final double amount;
-  final String currency;
+  final PaymentMethod paymentMethod;
   final TransactionStatus status;
-  final String? description;
-  final String? referenceId;
-  final String? counterparty;
-  final DateTime createdAt;
+  final int? branchId;
+  final String? notes;
+  final DateTime transactionDate;
 
   TransactionModel({
-    required this.id,
-    required this.userId,
-    required this.type,
+    required this.transactionId,
+    required this.senderWalletId,
+    required this.receiverWalletId,
+    required this.transactionType,
     required this.amount,
-    this.currency = 'LYD',
-    this.status = TransactionStatus.completed,
-    this.description,
-    this.referenceId,
-    this.counterparty,
-    required this.createdAt,
+    this.paymentMethod = PaymentMethod.direct,
+    this.status = TransactionStatus.pending,
+    this.branchId,
+    this.notes,
+    required this.transactionDate,
   });
 
-  factory TransactionModel.fromJson(Map<String, dynamic> json) {
-    return TransactionModel(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      type: _parseType(json['type'] as String),
-      amount: (json['amount'] as num).toDouble(),
-      currency: (json['currency'] as String?) ?? 'LYD',
-      status: _parseStatus(json['status'] as String? ?? 'completed'),
-      description: json['description'] as String?,
-      referenceId: json['reference_id'] as String?,
-      counterparty: json['counterparty'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-    );
-  }
+  bool get isCompleted => status == TransactionStatus.completed;
+  bool get isPayment => transactionType == TransactionType.payment;
+  bool get isTransfer => transactionType == TransactionType.transfer;
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'user_id': userId,
-      'type': type.name,
-      'amount': amount,
-      'currency': currency,
-      'status': status.name,
-      'description': description,
-      'reference_id': referenceId,
-      'counterparty': counterparty,
-      'created_at': createdAt.toIso8601String(),
-    };
-  }
+  factory TransactionModel.fromJson(Map<String, dynamic> json) =>
+      TransactionModel(
+        transactionId: json['transaction_id'] as int,
+        senderWalletId: json['sender_wallet_id'] as int,
+        receiverWalletId: json['receiver_wallet_id'] as int,
+        transactionType: _parseType(json['transaction_type'] as String),
+        amount: (json['amount'] as num).toDouble(),
+        paymentMethod:
+            _parsePayment(json['payment_method'] as String? ?? 'direct'),
+        status: _parseStatus(json['status'] as String? ?? 'pending'),
+        branchId: json['branch_id'] as int?,
+        notes: json['notes'] as String?,
+        transactionDate: DateTime.parse(json['transaction_date'] as String),
+      );
 
-  static TransactionType _parseType(String value) {
-    return TransactionType.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => TransactionType.payment,
-    );
-  }
+  Map<String, dynamic> toJson() => {
+    'transaction_id': transactionId,
+    'sender_wallet_id': senderWalletId,
+    'receiver_wallet_id': receiverWalletId,
+    'transaction_type': transactionType.name,
+    'amount': amount,
+    'payment_method': paymentMethod.name,
+    'status': status.name,
+    'branch_id': branchId,
+    'notes': notes,
+    'transaction_date': transactionDate.toIso8601String(),
+  };
 
-  static TransactionStatus _parseStatus(String value) {
-    return TransactionStatus.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => TransactionStatus.completed,
-    );
-  }
+  static TransactionType _parseType(String v) =>
+      TransactionType.values.firstWhere((e) => e.name == v,
+          orElse: () => TransactionType.payment);
 
-  String get formattedAmount {
-    final prefix = type == TransactionType.topup ? '+' : '-';
-    return '$prefix${amount.toStringAsFixed(2)} $currency';
-  }
+  static PaymentMethod _parsePayment(String v) =>
+      PaymentMethod.values.firstWhere((e) => e.name == v,
+          orElse: () => PaymentMethod.direct);
 
-  bool get isCredit => type == TransactionType.topup;
+  static TransactionStatus _parseStatus(String v) =>
+      TransactionStatus.values.firstWhere((e) => e.name == v,
+          orElse: () => TransactionStatus.pending);
 }
