@@ -1,28 +1,77 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 
-import '../../core/supabase/supabase_client.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import '../../core/theme/app_colors.dart';
-import '../../data/models/transaction_model.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/transaction_provider.dart';
+import '../../data/transaction.dart';
+import '../notifications/notifications_page_view.dart';
 import 'filter_chip_label.dart';
 import 'summary_card.dart';
 import 'transaction_card.dart';
 import 'transaction_date_header.dart';
 
-class TransactionsPageView extends ConsumerWidget {
+class TransactionsPageView extends StatefulWidget {
   const TransactionsPageView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = SupabaseService.I.auth.currentUser;
-    final userIdAsync = ref.watch(currentUserIdProvider);
+  State<TransactionsPageView> createState() => _TransactionsPageViewState();
+}
 
-    if (user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+class _TransactionsPageViewState extends State<TransactionsPageView> {
+  final _searchController = TextEditingController();
+  List<Transaction> _transactions = [];
+  bool _loading = true;
+  String _searchQuery = '';
+  String _selectedFilter = 'الكل';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Transaction> get _filteredTransactions {
+    var result = _transactions;
+    if (_selectedFilter == 'تحويل') {
+      result = result.where((t) => t.type == 'income').toList();
+    } else if (_selectedFilter == 'شراء') {
+      result = result.where((t) => t.type == 'expense').toList();
     }
+    if (_searchQuery.isNotEmpty) {
+      result = result
+          .where((t) => t.description.contains(_searchQuery))
+          .toList();
+    }
+    return result;
+  }
 
+  Future<void> _loadTransactions() async {
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/data/transactions.json');
+      final List<dynamic> decoded = jsonDecode(jsonString) as List<dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _transactions = decoded
+            .map((e) => Transaction.fromJson(e as Map<String, dynamic>))
+            .toList();
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -33,18 +82,25 @@ class TransactionsPageView extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.card.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.cardBorder),
-                    ),
-                    child: const Icon(
-                      Icons.notifications_none_rounded,
-                      color: Colors.white,
-                      size: 22,
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pushNamed(
+                        NotificationsPageView.routeName,
+                      );
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.card.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_none_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ),
                   ),
                   const Spacer(),
@@ -67,157 +123,187 @@ class TransactionsPageView extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppColors.cardBorder),
                 ),
-                child: const Row(
-                  textDirection: TextDirection.ltr,
-                  children: [
-                    Icon(Icons.tune_rounded, color: AppColors.mint),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'بحث عن معاملة',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          color: AppColors.mutedText,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                child: Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Row(
+                    textDirection: TextDirection.ltr,
+                    children: [
+                      const Icon(Icons.tune_rounded, color: AppColors.mint),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          textDirection: TextDirection.rtl,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'بحث عن معاملة',
+                            hintTextDirection: TextDirection.rtl,
+                            hintStyle: TextStyle(
+                              color: AppColors.mutedText.withValues(alpha: 0.7),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setState(() => _searchQuery = value.trim());
+                          },
                         ),
                       ),
-                    ),
-                    SizedBox(width: 12),
-                    Icon(Icons.search_rounded, color: Colors.white),
-                  ],
+                      const SizedBox(width: 12),
+                      if (_searchQuery.isNotEmpty)
+                        GestureDetector(
+                          onTap: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: AppColors.mutedText,
+                            size: 20,
+                          ),
+                        )
+                      else
+                        const Icon(
+                          Icons.search_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: const [
-                  FilterChipLabel(label: 'الكل', active: true),
-                  FilterChipLabel(label: 'تحويل'),
-                  FilterChipLabel(label: 'شراء'),
+                children: [
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedFilter = 'الكل'),
+                    child: FilterChipLabel(
+                      label: 'الكل',
+                      active: _selectedFilter == 'الكل',
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedFilter = 'تحويل'),
+                    child: FilterChipLabel(
+                      label: 'تحويل',
+                      active: _selectedFilter == 'تحويل',
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedFilter = 'شراء'),
+                    child: FilterChipLabel(
+                      label: 'شراء',
+                      active: _selectedFilter == 'شراء',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 18),
-              userIdAsync.when(
-                data: (userId) =>
-                    _TransactionList(userId: userId),
-                loading: () => const Center(
+              if (_loading)
+                const Center(
                   child: Padding(
                     padding: EdgeInsets.all(32),
-                    child: CircularProgressIndicator(),
+                    child:
+                        CircularProgressIndicator(color: AppColors.mint),
                   ),
-                ),
-                error: (_, _) => const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text(
-                    'حدث خطأ في تحميل المعاملات',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.danger),
-                  ),
-                ),
-              ),
+                )
+              else
+                _buildTransactionList(),
             ],
           ),
         ),
       ),
     );
   }
-}
 
-class _TransactionList extends ConsumerWidget {
-  final int userId;
-  const _TransactionList({required this.userId});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final transactionsAsync = ref.watch(transactionsProvider(userId));
-    return transactionsAsync.when(
-      data: (txns) => _buildTransactionList(txns),
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: CircularProgressIndicator(),
-        ),
-      ),
-      error: (_, _) => const Padding(
-        padding: EdgeInsets.all(32),
-        child: Text(
-          'حدث خطأ في تحميل المعاملات',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.danger),
-        ),
-      ),
-    );
+  String _monthName(int month) {
+    const names = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    return names[month - 1];
   }
 
-  Widget _buildTransactionList(List<TransactionModel> txns) {
-    if (txns.isEmpty) {
+  Widget _buildTransactionList() {
+    final filtered = _filteredTransactions;
+
+    if (filtered.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(24),
         child: Text(
-          'لا توجد معاملات بعد',
+          'لا توجد معاملات',
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.mutedText),
         ),
       );
     }
 
+    final grouped = <String, List<Transaction>>{};
+    for (final txn in filtered) {
+      final key = '${txn.date.year}-${txn.date.month}-${txn.date.day}';
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(txn);
+    }
+
+    final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    final now = DateTime.now();
+    final todayKey = '${now.year}-${now.month}-${now.day}';
+    final yesterday =
+        now.subtract(const Duration(days: 1));
+    final yesterdayKey =
+        '${yesterday.year}-${yesterday.month}-${yesterday.day}';
+
     double totalExpense = 0;
     double totalIncome = 0;
 
-    final today = DateTime.now();
-    final todayStr = 'اليوم - ${today.day} ${_monthName(today.month)} ${today.year}';
-    final yesterday = today.subtract(const Duration(days: 1));
-    final yesterdayStr =
-        'أمس - ${yesterday.day} ${_monthName(yesterday.month)} ${yesterday.year}';
-
-    List<Widget> items = [];
-    List<TransactionModel> todayTxns = [];
-    List<TransactionModel> yesterdayTxns = [];
-    List<TransactionModel> olderTxns = [];
-
-    for (final txn in txns) {
-      final isToday = _isSameDay(txn.transactionDate, today);
-      final isYesterday = _isSameDay(txn.transactionDate, yesterday);
-
-      if (isToday) {
-        todayTxns.add(txn);
-      } else if (isYesterday) {
-        yesterdayTxns.add(txn);
+    final items = <Widget>[];
+    for (final key in sortedKeys) {
+      final txnList = grouped[key]!;
+      String label;
+      if (key == todayKey) {
+        final t = now;
+        label = 'اليوم - ${t.day} ${_monthName(t.month)} ${t.year}';
+      } else if (key == yesterdayKey) {
+        final t = yesterday;
+        label = 'أمس - ${t.day} ${_monthName(t.month)} ${t.year}';
       } else {
-        olderTxns.add(txn);
+        final parts = key.split('-');
+        final d = DateTime(int.parse(parts[0]), int.parse(parts[1]),
+            int.parse(parts[2]));
+        label =
+            '${d.day} ${_monthName(d.month)} ${d.year}';
       }
 
-      if (txn.transactionType == TransactionType.transfer) {
-        totalIncome += txn.amount;
-      } else {
-        totalExpense += txn.amount;
-      }
-    }
-
-    if (todayTxns.isNotEmpty) {
-      items.add(TransactionDateHeader(label: todayStr));
+      items.add(TransactionDateHeader(label: label));
       items.add(const SizedBox(height: 12));
-      for (final txn in todayTxns) {
-        items.add(_buildTransactionCard(txn));
-        items.add(const SizedBox(height: 10));
-      }
-    }
 
-    if (yesterdayTxns.isNotEmpty) {
-      items.add(TransactionDateHeader(label: yesterdayStr));
-      items.add(const SizedBox(height: 12));
-      for (final txn in yesterdayTxns) {
-        items.add(_buildTransactionCard(txn));
-        items.add(const SizedBox(height: 10));
-      }
-    }
+      for (final txn in txnList) {
+        if (txn.isIncome) {
+          totalIncome += txn.amount;
+        } else {
+          totalExpense += txn.amount;
+        }
 
-    if (olderTxns.isNotEmpty) {
-      items.add(const SizedBox(height: 16));
-      for (final txn in olderTxns) {
-        items.add(_buildTransactionCard(txn));
+        items.add(
+          TransactionCard(
+            title: txn.title,
+            subtitle: txn.description,
+            amount:
+                '${txn.isIncome ? '+' : '-'} ${txn.amount.toStringAsFixed(0)} LYD',
+            time: txn.time,
+            icon: txn.icon,
+            positive: txn.isIncome,
+          ),
+        );
         items.add(const SizedBox(height: 10));
       }
     }
@@ -247,7 +333,7 @@ class _TransactionList extends ConsumerWidget {
           Expanded(
             child: SummaryCard(
               title: 'عدد المعاملات',
-              value: '${txns.length}',
+              value: '${filtered.length}',
               icon: Icons.receipt_long_rounded,
               accent: AppColors.sky,
             ),
@@ -257,47 +343,5 @@ class _TransactionList extends ConsumerWidget {
     );
 
     return Column(children: items);
-  }
-
-  Widget _buildTransactionCard(TransactionModel txn) {
-    final isPositive = txn.transactionType == TransactionType.transfer;
-    return TransactionCard(
-      title: _titleForType(txn.transactionType),
-      subtitle: txn.notes ?? '',
-      amount:
-          '${isPositive ? '+' : '-'} ${txn.amount.toStringAsFixed(0)} LYD',
-      time: '${txn.transactionDate.hour.toString().padLeft(2, '0')}:${txn.transactionDate.minute.toString().padLeft(2, '0')}',
-      icon: _iconForType(txn.transactionType),
-      positive: isPositive,
-    );
-  }
-
-  String _titleForType(TransactionType type) {
-    switch (type) {
-      case TransactionType.transfer:
-        return 'تحويل مالي';
-      case TransactionType.payment:
-        return 'عملية شراء';
-    }
-  }
-
-  IconData _iconForType(TransactionType type) {
-    switch (type) {
-      case TransactionType.transfer:
-        return Icons.swap_horiz_rounded;
-      case TransactionType.payment:
-        return Icons.shopping_cart_outlined;
-    }
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
-  String _monthName(int month) {
-    const names = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-    ];
-    return names[month - 1];
   }
 }

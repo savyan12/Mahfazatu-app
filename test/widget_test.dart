@@ -53,8 +53,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(IndexedStack), findsOneWidget);
-    expect(find.text('مساء الخير،\nسفيان'), findsOneWidget);
-    expect(find.text('10,000 LYD'), findsOneWidget);
+    expect(find.textContaining('سفيان'), findsOneWidget);
+    expect(find.text('10000 LYD'), findsOneWidget);
     expect(find.text('آخر المعاملات'), findsOneWidget);
     expect(find.text('الرئيسية'), findsOneWidget);
   });

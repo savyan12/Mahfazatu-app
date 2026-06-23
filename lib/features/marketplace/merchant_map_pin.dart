@@ -18,11 +18,12 @@ class MerchantMapPin extends StatelessWidget {
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            color: accent.withValues(alpha: 0.5),
+            blurRadius: 12,
+            spreadRadius: 1,
+            offset: const Offset(0, 3),
           ),
         ],
       ),

@@ -30,7 +30,7 @@ const merchants = [
     latitude: 32.8872,
     longitude: 13.1913,
     icon: Icons.local_cafe,
-    accent: AppColors.card,
+    accent: AppColors.mint,
   ),
   MerchantData(
     name: 'سوبر ماركت المدينة',
@@ -39,7 +39,7 @@ const merchants = [
     latitude: 32.8895,
     longitude: 13.1800,
     icon: Icons.shopping_cart,
-    accent: AppColors.teal,
+    accent: AppColors.mint,
   ),
   MerchantData(
     name: 'مطعم بيت الشاورما',
@@ -48,7 +48,7 @@ const merchants = [
     latitude: 32.8840,
     longitude: 13.1990,
     icon: Icons.restaurant,
-    accent: AppColors.danger,
+    accent: AppColors.mint,
   ),
   MerchantData(
     name: 'عيادة النهدي',
@@ -57,6 +57,6 @@ const merchants = [
     latitude: 32.8860,
     longitude: 13.1940,
     icon: Icons.favorite,
-    accent: AppColors.sky,
+    accent: AppColors.mint,
   ),
 ];

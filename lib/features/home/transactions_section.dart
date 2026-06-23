@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../data/models/transaction_model.dart';
 import '../../shared/widgets/app_controls.dart';
 import '../transactions/transactions_screen.dart';
 
 class TransactionsSection extends StatelessWidget {
-  final List<TransactionModel> transactions;
-  const TransactionsSection({this.transactions = const [], super.key});
+  const TransactionsSection({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -34,49 +32,31 @@ class TransactionsSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        if (transactions.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text(
-              'لا توجد معاملات بعد',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.mutedText),
-            ),
-          )
-        else
-          ...transactions.map((txn) {
-            final isPositive = txn.transactionType == TransactionType.transfer;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: TransactionRow(
-                title: txn.notes ?? txn.transactionType.name,
-                subtitle: _formatDate(txn.transactionDate),
-                amount:
-                    '${isPositive ? '+' : '-'} ${txn.amount.toStringAsFixed(0)} LYD',
-                positive: isPositive,
-                icon: _iconForType(txn.transactionType),
-              ),
-            );
-          }),
+        TransactionRow(
+          title: 'تحويل وارد',
+          subtitle: 'اليوم',
+          amount: '+ 1500 LYD',
+          positive: true,
+          icon: Icons.swap_horiz_rounded,
+        ),
+        const SizedBox(height: 12),
+        TransactionRow(
+          title: 'مشتريات سوبر ماركت',
+          subtitle: 'أمس',
+          amount: '- 234 LYD',
+          positive: false,
+          icon: Icons.shopping_cart_outlined,
+        ),
+        const SizedBox(height: 12),
+        TransactionRow(
+          title: 'فواتير',
+          subtitle: '20/6/2026',
+          amount: '- 120 LYD',
+          positive: false,
+          icon: Icons.receipt_long_outlined,
+        ),
       ],
     );
-  }
-
-  IconData _iconForType(TransactionType type) {
-    switch (type) {
-      case TransactionType.transfer:
-        return Icons.swap_horiz_rounded;
-      case TransactionType.payment:
-        return Icons.shopping_cart_outlined;
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inDays == 0) return 'اليوم';
-    if (diff.inDays == 1) return 'أمس';
-    return '${date.day}/${date.month}/${date.year}';
   }
 }
 

@@ -1,30 +1,47 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 
-import '../../core/supabase/supabase_client.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/profile_provider.dart';
-import '../../providers/wallet_provider.dart';
-import '../../providers/transaction_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../data/profile.dart';
 import '../../shared/widgets/app_background.dart';
 import 'home_widgets.dart';
 
-class HomePageView extends ConsumerWidget {
+class HomePageView extends StatefulWidget {
   const HomePageView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<HomePageView> createState() => _HomePageViewState();
+}
+
+class _HomePageViewState extends State<HomePageView> {
+  Profile? _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/data/profile.json');
+      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() => _profile = Profile.fromJson(decoded));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _profile = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewPadding.bottom;
     final bottomNavHeight = 104.0 + bottomInset;
-    final user = SupabaseService.I.auth.currentUser;
-
-    if (user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    final authUid = user.id;
-    final profileAsync = ref.watch(profileProvider(authUid));
-    final userIdAsync = ref.watch(currentUserIdProvider);
+    final name = _profile?.name ?? 'سفيان';
+    final balance = _profile?.balance ?? 10000;
+    final points = _profile?.points ?? 840;
 
     return Scaffold(
       body: AppBackground.dark(
@@ -35,77 +52,22 @@ class HomePageView extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                profileAsync.when(
-                  data: (profile) => HomeHeader(profile: profile),
-                  loading: () => const HomeHeader(),
-                  error: (_, _) => const HomeHeader(),
-                ),
+                HomeHeader(name: name),
                 const SizedBox(height: 40),
-                userIdAsync.when(
-                  data: (userId) => _HomeWalletSection(userId: userId),
-                  loading: () => const Column(children: [
-                    BankAccountCard(),
-                    SizedBox(height: 34),
-                    CardCarouselIndicator(),
-                    SizedBox(height: 24),
-                    PointsBanner(),
-                    SizedBox(height: 54),
-                    QuickActionsRow(),
-                    SizedBox(height: 48),
-                  ]),
-                  error: (_, _) => const Column(children: [
-                    BankAccountCard(),
-                    SizedBox(height: 34),
-                    CardCarouselIndicator(),
-                    SizedBox(height: 24),
-                    PointsBanner(),
-                    SizedBox(height: 54),
-                    QuickActionsRow(),
-                    SizedBox(height: 48),
-                  ]),
-                ),
+                BankAccountCard(balance: balance),
+                const SizedBox(height: 34),
+                const CardCarouselIndicator(),
+                const SizedBox(height: 24),
+                PointsBanner(points: points),
+                const SizedBox(height: 54),
+                const QuickActionsRow(),
+                const SizedBox(height: 48),
+                const TransactionsSection(),
               ],
             ),
           ),
         ),
       ),
     );
-  }
-}
-
-class _HomeWalletSection extends ConsumerWidget {
-  final int userId;
-  const _HomeWalletSection({required this.userId});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final walletAsync = ref.watch(walletProvider(userId));
-    final balanceAsync = ref.watch(balanceProvider(userId));
-    final transactionsAsync = ref.watch(transactionsProvider(userId));
-
-    return Column(children: [
-      balanceAsync.when(
-        data: (balance) => BankAccountCard(balance: balance),
-        loading: () => const BankAccountCard(),
-        error: (_, _) => const BankAccountCard(),
-      ),
-      const SizedBox(height: 34),
-      const CardCarouselIndicator(),
-      const SizedBox(height: 24),
-      walletAsync.when(
-        data: (wallet) => PointsBanner(points: wallet.points),
-        loading: () => const PointsBanner(),
-        error: (_, _) => const PointsBanner(),
-      ),
-      const SizedBox(height: 54),
-      const QuickActionsRow(),
-      const SizedBox(height: 48),
-      transactionsAsync.when(
-        data: (txns) =>
-            TransactionsSection(transactions: txns.take(2).toList()),
-        loading: () => const TransactionsSection(),
-        error: (_, _) => const TransactionsSection(),
-      ),
-    ]);
   }
 }

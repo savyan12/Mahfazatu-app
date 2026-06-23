@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "title": "تحويل وارد",
+    "description": "تحويل من أحمد",
+    "amount": 1500,
+    "date": "2026-06-23",
+    "time": "14:30",
+    "type": "income"
+  },
+  {
+    "id": 2,
+    "title": "مشتريات سوبر ماركت",
+    "description": "شراء من سوبر ماركت جهاد مول",
+    "amount": 234,
+    "date": "2026-06-22",
+    "time": "11:15",
+    "type": "expense"
+  },
+  {
+    "id": 3,
+    "title": "فواتير",
+    "description": "فاتورة الكهرباء",
+    "amount": 120,
+    "date": "2026-06-22",
+    "time": "09:00",
+    "type": "expense"
+  },
+  {
+    "id": 4,
+    "title": "تحويل مالي",
+    "description": "تحويل من صديق",
+    "amount": 50,
+    "date": "2026-06-21",
+    "time": "10:30",
+    "type": "income"
+  },
+  {
+    "id": 5,
+    "title": "مقهى",
+    "description": "شراء من مقهى البتشينو",
+    "amount": 25,
+    "date": "2026-06-20",
+    "time": "16:45",
+    "type": "expense"
+  },
+  {
+    "id": 6,
+    "title": "مطعم",
+    "description": "شراء من مطعم قصر الوالي",
+    "amount": 12,
+    "date": "2026-06-19",
+    "time": "13:45",
+    "type": "expense"
+  }
+]

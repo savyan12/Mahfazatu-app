@@ -11,26 +11,30 @@ class StepProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = currentStep == 1 ? 0.50 : 1.0;
 
-    return Column(
-      children: [
-        SizedBox(
-          height: 22,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Positioned.fill(
-                top: 9,
-                bottom: 9,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.mint.withValues(alpha: 0.24),
-                    borderRadius: BorderRadius.circular(12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+
+        return Column(
+          children: [
+            SizedBox(
+              height: 22,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned.fill(
+                    top: 9,
+                    bottom: 9,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.mint.withValues(alpha: 0.24),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: (1 - progress) * MediaQuery.sizeOf(context).width,
+                  Positioned(
+                    left: 0,
+                    right: (1 - progress) * availableWidth,
                 child: Container(
                   height: 4,
                   decoration: BoxDecoration(
@@ -77,7 +81,9 @@ class StepProgress extends StatelessWidget {
             ),
           ],
         ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

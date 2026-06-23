@@ -1,44 +1,68 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../data/models/merchant_model.dart';
-import '../../providers/merchant_provider.dart';
+import '../../data/merchant.dart';
+import '../notifications/notifications_page_view.dart';
 import 'marketplace_widgets.dart';
 
-class MarketplacePageView extends ConsumerStatefulWidget {
+class MarketplacePageView extends StatefulWidget {
   const MarketplacePageView({super.key});
 
   static const routeName = '/marketplace';
 
   @override
-  ConsumerState<MarketplacePageView> createState() =>
-      _MarketplacePageViewState();
+  State<MarketplacePageView> createState() => _MarketplacePageViewState();
 }
 
-class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
+class _MarketplacePageViewState extends State<MarketplacePageView> {
   static const LatLng _tripoliFallback = LatLng(32.8872, 13.1913);
   late final MapController _mapController;
+  final _searchController = TextEditingController();
   LatLng _center = _tripoliFallback;
   bool _loadingLocation = true;
+  bool _loadingMerchants = true;
   String _locationLabel = 'ليبيا - طرابلس';
   String _locationStatus = 'جارٍ تحديد الموقع الحالي...';
-  String? _selectedServiceType;
+  String _searchQuery = '';
+  String? _selectedCategory;
+  List<Merchant> _merchants = [];
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
+    _loadMerchants();
     _loadCurrentLocation();
   }
 
   @override
   void dispose() {
     _mapController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadMerchants() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/data/merchants.json');
+      final List<dynamic> decoded = jsonDecode(jsonString) as List<dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _merchants = decoded
+            .map((e) => Merchant.fromJson(e as Map<String, dynamic>))
+            .toList();
+        _loadingMerchants = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingMerchants = false);
+    }
   }
 
   Future<void> _loadCurrentLocation() async {
@@ -86,12 +110,21 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
     }
   }
 
+  List<Merchant> get _filteredMerchants {
+    var result = _merchants;
+    if (_selectedCategory != null) {
+      result = result.where((m) => m.category == _selectedCategory).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      result = result
+          .where((m) => m.name.contains(_searchQuery))
+          .toList();
+    }
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final merchantsAsync = _selectedServiceType == null
-        ? ref.watch(merchantsProvider)
-        : ref.watch(merchantsByServiceProvider(_selectedServiceType!));
-
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -102,18 +135,27 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.card.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.cardBorder),
-                    ),
-                    child: const Icon(
-                      Icons.notifications_none_rounded,
-                      color: Colors.white,
-                      size: 22,
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pushNamed(
+                        NotificationsPageView.routeName,
+                      );
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.card.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.mint.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_none_rounded,
+                        color: AppColors.mint,
+                        size: 22,
+                      ),
                     ),
                   ),
                   const Spacer(),
@@ -154,25 +196,52 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                 decoration: BoxDecoration(
                   color: AppColors.card.withValues(alpha: 0.82),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.cardBorder),
+                  border: Border.all(
+                    color: AppColors.mint.withValues(alpha: 0.15),
+                  ),
                 ),
-                child: const Row(
-                  textDirection: TextDirection.ltr,
-                  children: [
-                    Icon(Icons.search_rounded, color: Colors.white),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'ابحث عن متجر أو خدمة',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          color: AppColors.mutedText,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                child: Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: TextField(
+                    controller: _searchController,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: 'ابحث عن متجر أو خدمة',
+                      hintStyle: TextStyle(
+                        color: AppColors.mutedText.withValues(alpha: 0.7),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: AppColors.mint,
+                        size: 22,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? GestureDetector(
+                              onTap: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                              child: const Icon(
+                                Icons.close_rounded,
+                                color: AppColors.mutedText,
+                                size: 20,
+                              ),
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) {
+                      setState(() => _searchQuery = value.trim());
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -180,7 +249,16 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                 height: 210,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.cardBorder),
+                  border: Border.all(
+                    color: AppColors.mint.withValues(alpha: 0.2),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.mint.withValues(alpha: 0.08),
+                      blurRadius: 18,
+                      spreadRadius: 0,
+                    ),
+                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18),
@@ -208,11 +286,11 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                             child: _loadingLocation
                                 ? const MerchantMapPin(
                                     icon: Icons.location_searching_rounded,
-                                    accent: AppColors.sky,
+                                    accent: AppColors.mint,
                                   )
                                 : const MerchantMapPin(
                                     icon: Icons.my_location_rounded,
-                                    accent: AppColors.sky,
+                                    accent: AppColors.mint,
                                   ),
                           ),
                         ],
@@ -229,8 +307,8 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                     child: MarketplaceCategoryTile(
                       label: 'الكل',
                       icon: Icons.grid_view_rounded,
-                      active: _selectedServiceType == null,
-                      onTap: () => setState(() => _selectedServiceType = null),
+                      active: _selectedCategory == null,
+                      onTap: () => setState(() => _selectedCategory = null),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -238,9 +316,9 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                     child: MarketplaceCategoryTile(
                       label: 'تسوق',
                       icon: Icons.shopping_bag_outlined,
-                      active: _selectedServiceType == 'shopping',
+                      active: _selectedCategory == 'تسوق',
                       onTap: () =>
-                          setState(() => _selectedServiceType = 'shopping'),
+                          setState(() => _selectedCategory = 'تسوق'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -248,9 +326,9 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                     child: MarketplaceCategoryTile(
                       label: 'مطاعم',
                       icon: Icons.restaurant_outlined,
-                      active: _selectedServiceType == 'restaurant',
+                      active: _selectedCategory == 'مطاعم',
                       onTap: () =>
-                          setState(() => _selectedServiceType = 'restaurant'),
+                          setState(() => _selectedCategory = 'مطاعم'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -258,9 +336,9 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                     child: MarketplaceCategoryTile(
                       label: 'خدمات',
                       icon: Icons.work_outline_rounded,
-                      active: _selectedServiceType == 'services',
+                      active: _selectedCategory == 'خدمات',
                       onTap: () =>
-                          setState(() => _selectedServiceType = 'services'),
+                          setState(() => _selectedCategory = 'خدمات'),
                     ),
                   ),
                 ],
@@ -276,37 +354,22 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
                 ),
               ),
               const SizedBox(height: 12),
-              merchantsAsync.when(
-                data: (merchants) =>
-                    _buildMerchantList(merchants),
-                loading: () => const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-                error: (_, _) => const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text(
-                    'حدث خطأ في تحميل المتاجر',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.danger),
-                  ),
-                ),
-              ),
+              _buildMerchantList(_filteredMerchants),
               const SizedBox(height: 14),
               Container(
                 height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.card.withValues(alpha: 0.7),
+                  color: AppColors.mint.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.cardBorder),
+                  border: Border.all(
+                    color: AppColors.mint.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: const Text(
-                  'عرض المزيد',
+                  'عرض المزيد من المتاجر',
                   style: TextStyle(
-                    color: AppColors.mutedText,
+                    color: AppColors.mint,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -319,7 +382,16 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
     );
   }
 
-  Widget _buildMerchantList(List<MerchantModel> merchants) {
+  Widget _buildMerchantList(List<Merchant> merchants) {
+    if (_loadingMerchants) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: CircularProgressIndicator(color: AppColors.mint),
+        ),
+      );
+    }
+
     if (merchants.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(24),
@@ -336,44 +408,16 @@ class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: MarketplaceStoreCard(
-            name: m.name ?? m.merchantCode,
-            category: _serviceTypeName(m.serviceType),
+            name: m.name,
+            category: m.category,
             distance:
                 '${_distanceTo(m.latitude, m.longitude).toStringAsFixed(1)} كم',
-            icon: _iconForService(m.serviceType),
+            icon: m.icon,
             accent: AppColors.mint,
           ),
         );
       }).toList(),
     );
-  }
-
-  String _serviceTypeName(String type) {
-    switch (type) {
-      case 'cafe':
-        return 'مقهى';
-      case 'shopping':
-        return 'تسوق';
-      case 'restaurant':
-        return 'مطعم';
-      case 'services':
-        return 'خدمات';
-      default:
-        return type;
-    }
-  }
-
-  IconData _iconForService(String type) {
-    switch (type) {
-      case 'cafe':
-        return Icons.local_cafe_outlined;
-      case 'shopping':
-        return Icons.shopping_cart_outlined;
-      case 'restaurant':
-        return Icons.restaurant_outlined;
-      default:
-        return Icons.store_outlined;
-    }
   }
 
   double _distanceTo(double latitude, double longitude) {

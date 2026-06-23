@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../data/models/profile_model.dart';
-import 'home_feature_page.dart';
+import '../notifications/notifications_page_view.dart';
 
 class HomeHeader extends StatelessWidget {
-  final ProfileModel? profile;
-  const HomeHeader({this.profile, super.key});
+  final String name;
+  const HomeHeader({this.name = 'سفيان', super.key});
 
   @override
   Widget build(BuildContext context) {
     final greeting = _getGreeting();
-    final name = profile?.name.isNotEmpty == true ? profile!.name : 'سفيان';
 
     return Row(
       textDirection: TextDirection.ltr,
@@ -18,11 +16,8 @@ class HomeHeader extends StatelessWidget {
       children: [
         IconButton(
           onPressed: () {
-            openHomeFeaturePage(
-              context,
-              title: 'الإشعارات',
-              subtitle: 'هنا ستظهر التنبيهات والتنبيهات المالية المهمة.',
-              icon: Icons.notifications_none_rounded,
+            Navigator.of(context).pushNamed(
+              NotificationsPageView.routeName,
             );
           },
           visualDensity: VisualDensity.compact,
@@ -50,7 +45,7 @@ class HomeHeader extends StatelessWidget {
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'صباح الخير';
-    if (hour < 17) return 'مساء الخير';
-    return 'مساء الخير';
+    if (hour < 18) return 'مساء الخير';
+    return 'ليلاً';
   }
 }

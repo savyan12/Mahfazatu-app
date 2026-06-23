@@ -1,70 +1,56 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 
-import '../../core/supabase/supabase_client.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import '../../core/theme/app_colors.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/profile_provider.dart';
+import '../../data/profile.dart';
+import '../notifications/notifications_page_view.dart';
 import '../../shared/widgets/app_background.dart';
 import '../auth/auth_screens.dart';
 import 'settings_widgets.dart';
 
-class SettingsPageView extends ConsumerStatefulWidget {
+class SettingsPageView extends StatefulWidget {
   const SettingsPageView({super.key});
 
   static const routeName = '/settings';
 
   @override
-  ConsumerState<SettingsPageView> createState() => _SettingsPageViewState();
+  State<SettingsPageView> createState() => _SettingsPageViewState();
 }
 
-class _SettingsPageViewState extends ConsumerState<SettingsPageView> {
+class _SettingsPageViewState extends State<SettingsPageView> {
   bool _darkModeEnabled = true;
+  Profile? _profile;
 
-  Future<void> _logout() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0A1C2A),
-        title: const Text('تسجيل الخروج',
-            style: TextStyle(color: Colors.white)),
-        content: const Text('هل أنت متأكد من تسجيل الخروج؟',
-            style: TextStyle(color: AppColors.mutedText)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('إلغاء',
-                style: TextStyle(color: AppColors.mutedText)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('تسجيل الخروج',
-                style: TextStyle(color: AppColors.danger)),
-          ),
-        ],
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
 
-    if (confirmed == true) {
-      try {
-        await ref.read(authRepositoryProvider).signOut();
-        if (!mounted) return;
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil(LoginScreen.routeName, (_) => false);
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('فشل تسجيل الخروج')),
-        );
-      }
+  Future<void> _loadProfile() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/data/profile.json');
+      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() => _profile = Profile.fromJson(decoded));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _profile = null);
     }
+  }
+
+  void _logout() {
+    Navigator.of(context)
+        .pushNamedAndRemoveUntil(LoginScreen.routeName, (_) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = SupabaseService.I.auth.currentUser;
-    final authUid = user?.id ?? '';
-    final profileAsync = ref.watch(profileProvider(authUid));
+    final name = _profile?.name ?? 'سفيان الترهوني';
+    final email = _profile?.email ?? 'sufyan@test.com';
+    final phone = _profile?.phone ?? '+218912345678';
 
     return Scaffold(
       body: AppBackground.dark(
@@ -78,18 +64,25 @@ class _SettingsPageViewState extends ConsumerState<SettingsPageView> {
                 Row(
                   textDirection: TextDirection.ltr,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.card.withValues(alpha: 0.95),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.cardBorder),
-                      ),
-                      child: const Icon(
-                        Icons.notifications_none_rounded,
-                        color: Colors.white,
-                        size: 22,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pushNamed(
+                          NotificationsPageView.routeName,
+                        );
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.card.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.cardBorder),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_none_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -114,13 +107,7 @@ class _SettingsPageViewState extends ConsumerState<SettingsPageView> {
                   ],
                 ),
                 const SizedBox(height: 18),
-                profileAsync.when(
-                  data: (profile) => _buildProfileCard(
-                      profile.name, user?.email ?? '', profile.phoneNumber),
-                  loading: () => _buildProfileCard('...', '...', '...'),
-                  error: (_, _) =>
-                      _buildProfileCard(user?.email ?? '', user?.email ?? '', ''),
-                ),
+                _buildProfileCard(name, email, phone),
                 const SizedBox(height: 18),
                 const SettingsSectionTitle(label: 'الحساب'),
                 const SizedBox(height: 10),

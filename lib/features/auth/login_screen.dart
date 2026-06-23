@@ -1,27 +1,37 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 
-import '../../providers/auth_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../data/session.dart';
+import '../../data/user.dart';
 import '../../shared/widgets/app_controls.dart';
 import '../home/home_screen.dart';
 import 'auth_screens.dart';
 import 'auth_widgets.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   static const routeName = '/login';
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _passwordVisible = false;
-  bool _loading = false;
+  bool _loading = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsers();
+  }
 
   @override
   void dispose() {
@@ -30,7 +40,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _loadUsers() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/data/users.json');
+      final List<dynamic> decoded = jsonDecode(jsonString) as List<dynamic>;
+      if (!mounted) return;
+      Session.users = decoded
+          .map((e) => User.fromJson(e as Map<String, dynamic>))
+          .toList();
+      setState(() => _loading = false);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  void _login() {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
@@ -39,20 +64,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final repo = ref.read(authRepositoryProvider);
-      await repo.signIn(email: email, password: password);
-      if (!mounted) return;
+    if (Session.login(email, password)) {
       Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
-    } catch (e) {
-      setState(() => _error = 'فشل تسجيل الدخول: تحقق من البريد وكلمة السر');
-    } finally {
-      if (mounted) setState(() => _loading = false);
+    } else {
+      setState(() => _error = 'البريد الإلكتروني أو كلمة السر غير صحيحة');
     }
   }
 
@@ -95,17 +110,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.redAccent,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
             ),
           ],
-          const SizedBox(height: 24),
-          PrimaryGradientButton(
-            label: _loading ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول',
-            onPressed: _loading ? null : _login,
-          ),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(color: AppColors.mint),
+            )
+          else ...[
+            const SizedBox(height: 24),
+            PrimaryGradientButton(
+              label: 'تسجيل الدخول',
+              onPressed: _login,
+            ),
+          ],
           const SizedBox(height: 20),
           Row(
             textDirection: TextDirection.ltr,
@@ -116,9 +135,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 text: 'ليس لديك حساب؟',
                 actionText: 'سجل الآن',
                 onTap: () {
-                  Navigator.of(
-                    context,
-                  ).pushNamed(SignUpDetailsScreen.routeName);
+                  Navigator.of(context).pushNamed(
+                    SignUpDetailsScreen.routeName,
+                  );
                 },
               ),
             ],

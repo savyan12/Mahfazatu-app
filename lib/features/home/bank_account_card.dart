@@ -43,12 +43,12 @@ class BankAccountCard extends StatelessWidget {
                     children: [
                       Positioned(
                         right: width * 0.07,
-                        top: height * 0.48,
+                        top: height * 0.43,
                         child: Text(
                           '$formattedBalance LYD',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 21,
+                            fontSize: 19,
                             fontWeight: FontWeight.w800,
                             height: 1,
                           ),

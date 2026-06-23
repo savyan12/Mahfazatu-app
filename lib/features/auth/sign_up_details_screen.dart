@@ -21,7 +21,6 @@ class _SignUpDetailsScreenState extends State<SignUpDetailsScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -34,32 +33,13 @@ class _SignUpDetailsScreenState extends State<SignUpDetailsScreen> {
   }
 
   void _goToIdentity() {
-    final fullName = _fullNameController.text.trim();
-    final email = _emailController.text.trim();
-    final phone = _phoneController.text.trim();
-    final password = _passwordController.text;
-    final confirm = _confirmPasswordController.text;
-
-    if (fullName.isEmpty || email.isEmpty) {
-      setState(() => _error = 'يرجى ملء جميع الحقول المطلوبة');
-      return;
-    }
-    if (password.length < 6) {
-      setState(() => _error = 'كلمة السر يجب أن تكون 6 أحرف على الأقل');
-      return;
-    }
-    if (password != confirm) {
-      setState(() => _error = 'كلمة السر غير متطابقة');
-      return;
-    }
-
     Navigator.of(context).pushNamed(
       SignUpIdentityScreen.routeName,
       arguments: {
-        'fullName': fullName,
-        'email': email,
-        'phone': phone,
-        'password': password,
+        'fullName': _fullNameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'password': _passwordController.text,
       },
     );
   }
@@ -128,14 +108,6 @@ class _SignUpDetailsScreenState extends State<SignUpDetailsScreen> {
               });
             },
           ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-            ),
-          ],
           const SizedBox(height: 26),
           PrimaryGradientButton(
             label: 'التالي',

@@ -7,6 +7,7 @@ import '../features/redeem/redeem_points_screen.dart';
 import '../features/topup/topup_screen.dart';
 import '../features/transfer/transfer_screen.dart';
 import '../features/transactions/transactions_screen.dart';
+import '../features/notifications/notifications_page_view.dart';
 import '../features/settings/settings_page_view.dart';
 import '../features/splash/splash_screen.dart';
 
@@ -21,6 +22,7 @@ class AppRoutes {
       LoginScreen.routeName: (_) => const LoginScreen(),
       SignUpDetailsScreen.routeName: (_) => const SignUpDetailsScreen(),
       SignUpIdentityScreen.routeName: (_) => const SignUpIdentityScreen(),
+      NotificationsPageView.routeName: (_) => const NotificationsPageView(),
       HomeScreen.routeName: (_) => const HomeScreen(),
       SettingsPageView.routeName: (_) => const SettingsPageView(),
       TransactionsScreen.routeName: (_) => const TransactionsScreen(),

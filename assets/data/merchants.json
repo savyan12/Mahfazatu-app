@@ -1,0 +1,74 @@
+[
+  {
+    "name": "مقهى البتشينو",
+    "type": "مقهى",
+    "category": "مقاهي",
+    "rating": 4.8,
+    "latitude": 32.8872,
+    "longitude": 13.1913
+  },
+  {
+    "name": "سوبر ماركت جهاد مول",
+    "type": "سوبر ماركت",
+    "category": "تسوق",
+    "rating": 4.6,
+    "latitude": 32.8895,
+    "longitude": 13.1800
+  },
+  {
+    "name": "مطعم قصر الوالي",
+    "type": "مطعم",
+    "category": "مطاعم",
+    "rating": 4.5,
+    "latitude": 32.8840,
+    "longitude": 13.1990
+  },
+  {
+    "name": "مستشفى الرازي",
+    "type": "مستشفى",
+    "category": "خدمات",
+    "rating": 4.7,
+    "latitude": 32.8860,
+    "longitude": 13.1940
+  },
+  {
+    "name": "مقهى كافي لاتيه",
+    "type": "مقهى",
+    "category": "مقاهي",
+    "rating": 4.9,
+    "latitude": 32.8900,
+    "longitude": 13.1850
+  },
+  {
+    "name": "مليون موبيل شارع الظل",
+    "type": "إلكترونيات",
+    "category": "تسوق",
+    "rating": 4.4,
+    "latitude": 32.8830,
+    "longitude": 13.1950
+  },
+  {
+    "name": "مطعم الكرم",
+    "type": "مطعم",
+    "category": "مطاعم",
+    "rating": 4.3,
+    "latitude": 32.8880,
+    "longitude": 13.1860
+  },
+  {
+    "name": "مكتبة المعرفة",
+    "type": "مكتبة",
+    "category": "خدمات",
+    "rating": 4.9,
+    "latitude": 32.8850,
+    "longitude": 13.1920
+  },
+  {
+    "name": "صيدلية العافية",
+    "type": "صيدلية",
+    "category": "خدمات",
+    "rating": 4.2,
+    "latitude": 32.8910,
+    "longitude": 13.1790
+  }
+]

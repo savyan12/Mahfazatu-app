@@ -27,7 +27,9 @@ class MarketplaceStoreCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(
+          color: AppColors.mint.withValues(alpha: 0.12),
+        ),
       ),
       child: Row(
         children: [
@@ -91,7 +93,7 @@ class MarketplaceStoreCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          const Icon(Icons.chevron_left_rounded, color: Colors.white),
+          const Icon(Icons.chevron_left_rounded, color: AppColors.mint),
         ],
       ),
     );

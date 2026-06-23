@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../providers/auth_provider.dart';
+import '../../data/session.dart';
+import '../../data/user.dart';
 import '../../shared/widgets/app_controls.dart';
 import '../home/home_screen.dart';
 import 'auth_screens.dart';
 import 'auth_widgets.dart';
 
-class SignUpIdentityScreen extends ConsumerWidget {
+class SignUpIdentityScreen extends StatelessWidget {
   const SignUpIdentityScreen({super.key});
 
   static const routeName = '/sign-up/identity';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
@@ -130,7 +130,20 @@ class SignUpIdentityScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _SubmitButton(args: args),
+          PrimaryGradientButton(
+            label: 'إتمام التسجيل',
+            onPressed: () {
+              if (args != null) {
+                Session.register(User(
+                  email: args['email'] as String,
+                  password: args['password'] as String,
+                  name: args['fullName'] as String,
+                  phone: args['phone'] as String,
+                ));
+              }
+              Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
+            },
+          ),
           const SizedBox(height: 18),
           InlineAuthPrompt(
             text: 'لديك حساب بالفعل؟',
@@ -141,71 +154,6 @@ class SignUpIdentityScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SubmitButton extends ConsumerStatefulWidget {
-  final Map<String, dynamic>? args;
-  const _SubmitButton({this.args});
-
-  @override
-  ConsumerState<_SubmitButton> createState() => _SubmitButtonState();
-}
-
-class _SubmitButtonState extends ConsumerState<_SubmitButton> {
-  bool _loading = false;
-  String? _error;
-
-  Future<void> _submit() async {
-    final args = widget.args;
-    if (args == null) {
-      Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
-      return;
-    }
-
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final repo = ref.read(authRepositoryProvider);
-      await repo.signUp(
-        email: args['email'] as String,
-        password: args['password'] as String,
-        fullName: args['fullName'] as String,
-        phoneNumber: args['phone'] as String?,
-      );
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
-    } catch (e) {
-      setState(() => _error = 'فشل إنشاء الحساب: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-            ),
-          ),
-        PrimaryGradientButton(
-          label: _loading
-              ? 'جارٍ إنشاء الحساب...'
-              : 'إرسال للتحقق وإتمام التسجيل',
-          onPressed: _loading ? null : _submit,
-        ),
-      ],
     );
   }
 }

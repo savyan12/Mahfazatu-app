@@ -1,32 +1,47 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 
-import '../../core/supabase/supabase_client.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import '../../core/theme/app_colors.dart';
-import '../../data/models/reward_model.dart';
-import '../../data/models/merchant_model.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/merchant_provider.dart';
-import '../../providers/wallet_provider.dart';
-import '../../providers/reward_provider.dart';
+import '../../data/profile.dart';
 import '../../shared/widgets/app_background.dart';
 import 'redeem_widgets.dart';
 
-class RedeemPointsScreen extends ConsumerWidget {
+class RedeemPointsScreen extends StatefulWidget {
   const RedeemPointsScreen({super.key});
 
   static const routeName = '/redeem-points';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = SupabaseService.I.auth.currentUser;
-    if (user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+  State<RedeemPointsScreen> createState() => _RedeemPointsScreenState();
+}
 
-    final userIdAsync = ref.watch(currentUserIdProvider);
-    final merchantsAsync = ref.watch(merchantsProvider);
-    final rewardsAsync = ref.watch(rewardsProvider);
+class _RedeemPointsScreenState extends State<RedeemPointsScreen> {
+  Profile? _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/data/profile.json');
+      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() => _profile = Profile.fromJson(decoded));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _profile = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final points = _profile?.points ?? 840;
 
     return Scaffold(
       body: AppBackground.dark(
@@ -39,34 +54,15 @@ class RedeemPointsScreen extends ConsumerWidget {
               children: [
                 _buildHeader(context),
                 const SizedBox(height: 24),
-                userIdAsync.when(
-                  data: (userId) => _PointsCard(userId: userId),
-                  loading: () => _PointsCard(userId: 0),
-                  error: (_, _) => _PointsCard(userId: 0),
-                ),
+                _buildPointsCard(points),
                 const SizedBox(height: 28),
                 const RedeemSectionTitle(text: 'اختر المتجر'),
                 const SizedBox(height: 14),
-                merchantsAsync.when(
-                  data: (merchants) => _buildMerchantStrip(merchants),
-                  loading: () => const SizedBox(height: 84),
-                  error: (_, _) => const SizedBox(height: 84),
-                ),
+                _buildMerchantStrip(),
                 const SizedBox(height: 28),
                 const RedeemSectionTitle(text: 'المكافآت المتاحة'),
                 const SizedBox(height: 14),
-                rewardsAsync.when(
-                  data: (rewards) => _buildRewardsList(rewards, ref),
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (_, _) => const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text(
-                      'حدث خطأ في تحميل المكافآت',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.danger),
-                    ),
-                  ),
-                ),
+                _buildRewardsList(),
               ],
             ),
           ),
@@ -100,96 +96,7 @@ class RedeemPointsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMerchantStrip(List<MerchantModel> merchants) {
-    return SizedBox(
-      height: 84,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: merchants.length + 1,
-        separatorBuilder: (context, i) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return const RedeemMerchantCircle(
-              name: 'الكل',
-              icon: Icons.grid_view_rounded,
-              active: true,
-            );
-          }
-          final m = merchants[index - 1];
-          return RedeemMerchantCircle(
-            name: m.name ?? m.merchantCode,
-            icon: _iconForService(m.serviceType),
-            active: false,
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildRewardsList(List<RewardModel> rewards, WidgetRef ref) {
-    if (rewards.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: Text(
-          'لا توجد مكافآت متاحة حالياً',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.mutedText),
-        ),
-      );
-    }
-
-    return Column(
-      children: rewards.map((reward) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: OfferCard(
-            offer: OfferData(
-              merchantName: '',
-              title: reward.description ?? 'مكافأة',
-              badge: reward.isDiscount ? 'خصم' : 'جائزة',
-              discount: reward.discountText ?? '',
-              pointsRequired: reward.requiredPoints,
-              icon: Icons.diamond_outlined,
-              accent: AppColors.mint,
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  IconData _iconForService(String serviceType) {
-    switch (serviceType) {
-      case 'cafe':
-        return Icons.local_cafe_outlined;
-      case 'shopping':
-        return Icons.shopping_cart_outlined;
-      case 'restaurant':
-        return Icons.restaurant_outlined;
-      case 'services':
-        return Icons.work_outline_rounded;
-      default:
-        return Icons.store_outlined;
-    }
-  }
-}
-
-class _PointsCard extends ConsumerWidget {
-  final int userId;
-  const _PointsCard({required this.userId});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final walletAsync = ref.watch(walletProvider(userId));
-    return walletAsync.when(
-      data: (wallet) => _buildCard(wallet.points),
-      loading: () => _buildCard(0),
-      error: (_, _) => _buildCard(0),
-    );
-  }
-
-  Widget _buildCard(int points) {
+  Widget _buildPointsCard(int points) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
@@ -251,6 +158,67 @@ class _PointsCard extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMerchantStrip() {
+    return SizedBox(
+      height: 84,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: 4,
+        separatorBuilder: (context, i) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return const RedeemMerchantCircle(
+              name: 'الكل',
+              icon: Icons.grid_view_rounded,
+              active: true,
+            );
+          }
+          const merchants = [
+            ('مقهى رواء', Icons.local_cafe_outlined),
+            ('مطعم بيت الشاورما', Icons.restaurant_outlined),
+            ('سوبر ماركت المدينة', Icons.shopping_cart_outlined),
+          ];
+          return RedeemMerchantCircle(
+            name: merchants[index - 1].$1,
+            icon: merchants[index - 1].$2,
+            active: false,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildRewardsList() {
+    return Column(
+      children: [
+        OfferCard(
+          offer: OfferData(
+            merchantName: '',
+            title: 'خصم 10% على المشتريات',
+            badge: 'خصم',
+            discount: '10%',
+            pointsRequired: 100,
+            icon: Icons.diamond_outlined,
+            accent: AppColors.mint,
+          ),
+        ),
+        const SizedBox(height: 12),
+        OfferCard(
+          offer: OfferData(
+            merchantName: '',
+            title: 'قهوة مجانية',
+            badge: 'جائزة',
+            discount: 'مجاناً',
+            pointsRequired: 200,
+            icon: Icons.diamond_outlined,
+            accent: AppColors.mint,
+          ),
+        ),
+      ],
     );
   }
 }
