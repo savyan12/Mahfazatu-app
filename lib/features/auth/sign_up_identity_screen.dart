@@ -23,6 +23,20 @@ class SignUpIdentityScreen extends StatelessWidget {
       child: Column(
         children: [
           SizedBox(height: MediaQuery.sizeOf(context).height * 0.052),
+          Row(
+            textDirection: TextDirection.ltr,
+            children: [
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const Spacer(),
+            ],
+          ),
           const AuthLogoHeader(
             title: 'إنشاء حساب جديد',
             subtitle: 'اكتمال الملف الشخصي',
