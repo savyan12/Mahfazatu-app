@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_assets.dart';
 import '../../core/theme/app_colors.dart';
-import 'home_feature_page.dart';
+import '../redeem/redeem_points_screen.dart';
 
 class PointsBanner extends StatelessWidget {
-  const PointsBanner({super.key});
+  final int points;
+  const PointsBanner({this.points = 840, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,12 +16,7 @@ class PointsBanner extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          openHomeFeaturePage(
-            context,
-            title: 'النقاط والعروض',
-            subtitle: 'هنا يمكنك استبدال النقاط ومتابعة العروض اليومية.',
-            icon: Icons.diamond_outlined,
-          );
+          Navigator.of(context).pushNamed(RedeemPointsScreen.routeName);
         },
         child: Container(
           height: 46,
@@ -48,13 +44,13 @@ class PointsBanner extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'لديك 840 نقطة  استبدلها الآن',
+                  'لديك $points نقطة  استبدلها الآن',
                   textAlign: TextAlign.right,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,

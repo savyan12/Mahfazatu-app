@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import 'home_feature_page.dart';
+import '../payment/payment_screen.dart';
+import '../redeem/redeem_points_screen.dart';
+import '../topup/topup_screen.dart';
+import '../transfer/transfer_screen.dart';
 
 class QuickActionsRow extends StatelessWidget {
   const QuickActionsRow({super.key});
@@ -15,13 +18,7 @@ class QuickActionsRow extends StatelessWidget {
             icon: Icons.account_balance_wallet_outlined,
             label: 'تحويل مالي',
             onTap: () {
-              openHomeFeaturePage(
-                context,
-                title: 'التحويل المالي',
-                subtitle:
-                    'واجهة التحويلات المالية أصبحت جاهزة للربط الحقيقي لاحقاً.',
-                icon: Icons.account_balance_wallet_outlined,
-              );
+              Navigator.of(context).pushNamed(TransferScreen.routeName);
             },
           ),
         ),
@@ -31,12 +28,7 @@ class QuickActionsRow extends StatelessWidget {
             icon: Icons.shopping_basket_outlined,
             label: 'عملية دفع',
             onTap: () {
-              openHomeFeaturePage(
-                context,
-                title: 'عملية دفع',
-                subtitle: 'هنا يمكن ربط الدفع المباشر أو فواتير المشتريات.',
-                icon: Icons.shopping_basket_outlined,
-              );
+              Navigator.of(context).pushNamed(PaymentScreen.routeName);
             },
           ),
         ),
@@ -46,13 +38,7 @@ class QuickActionsRow extends StatelessWidget {
             icon: Icons.diamond_outlined,
             label: 'استبدال النقاط',
             onTap: () {
-              openHomeFeaturePage(
-                context,
-                title: 'استبدال النقاط',
-                subtitle:
-                    'صفحة استبدال النقاط تحتاج ربطاً بخادم النقاط لاحقاً.',
-                icon: Icons.diamond_outlined,
-              );
+              Navigator.of(context).pushNamed(RedeemPointsScreen.routeName);
             },
           ),
         ),
@@ -62,13 +48,7 @@ class QuickActionsRow extends StatelessWidget {
             icon: Icons.savings_outlined,
             label: 'شحن الرصيد',
             onTap: () {
-              openHomeFeaturePage(
-                context,
-                title: 'شحن الرصيد',
-                subtitle:
-                    'يمكن ربط هذا المسار بخدمة الشحن أو التحويل من البطاقة.',
-                icon: Icons.savings_outlined,
-              );
+              Navigator.of(context).pushNamed(TopupScreen.routeName);
             },
           ),
         ),

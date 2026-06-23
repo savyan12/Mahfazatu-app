@@ -54,7 +54,7 @@ void main() {
 
     expect(find.byType(IndexedStack), findsOneWidget);
     expect(find.text('مساء الخير،\nسفيان'), findsOneWidget);
-    expect(find.text(r'$10,000'), findsOneWidget);
+    expect(find.text('10,000 LYD'), findsOneWidget);
     expect(find.text('آخر المعاملات'), findsOneWidget);
     expect(find.text('الرئيسية'), findsOneWidget);
   });

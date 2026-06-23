@@ -12,7 +12,7 @@ class PrimaryGradientButton extends StatelessWidget {
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final IconData? icon;
   final bool compact;
 
@@ -24,10 +24,13 @@ class PrimaryGradientButton extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: [AppColors.teal, Color(0xFF4FCB91)],
+            colors: [
+              onPressed != null ? AppColors.teal : AppColors.teal.withValues(alpha: 0.4),
+              onPressed != null ? const Color(0xFF4FCB91) : const Color(0xFF4FCB91).withValues(alpha: 0.4),
+            ],
           ),
         ),
         child: ElevatedButton(

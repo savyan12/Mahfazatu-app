@@ -1,22 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/supabase/supabase_client.dart';
 import '../../core/theme/app_colors.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../shared/widgets/app_background.dart';
+import '../auth/auth_screens.dart';
+import 'settings_widgets.dart';
 
-class SettingsPageView extends StatefulWidget {
+class SettingsPageView extends ConsumerStatefulWidget {
   const SettingsPageView({super.key});
 
   static const routeName = '/settings';
 
   @override
-  State<SettingsPageView> createState() => _SettingsPageViewState();
+  ConsumerState<SettingsPageView> createState() => _SettingsPageViewState();
 }
 
-class _SettingsPageViewState extends State<SettingsPageView> {
+class _SettingsPageViewState extends ConsumerState<SettingsPageView> {
   bool _darkModeEnabled = true;
+
+  Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0A1C2A),
+        title: const Text('تسجيل الخروج',
+            style: TextStyle(color: Colors.white)),
+        content: const Text('هل أنت متأكد من تسجيل الخروج؟',
+            style: TextStyle(color: AppColors.mutedText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء',
+                style: TextStyle(color: AppColors.mutedText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('تسجيل الخروج',
+                style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(authRepositoryProvider).signOut();
+        if (!mounted) return;
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil(LoginScreen.routeName, (_) => false);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('فشل تسجيل الخروج')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final user = SupabaseService.I.auth.currentUser;
+    final userId = user?.id ?? '';
+    final profileAsync = ref.watch(profileProvider(userId));
+
     return Scaffold(
       body: AppBackground.dark(
         child: SafeArea(
@@ -65,120 +114,34 @@ class _SettingsPageViewState extends State<SettingsPageView> {
                   ],
                 ),
                 const SizedBox(height: 18),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.card.withValues(alpha: 0.78),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.cardBorder),
-                  ),
-                  child: Row(
-                    textDirection: TextDirection.ltr,
-                    children: [
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.backgroundBottom,
-                              border: Border.all(
-                                color: AppColors.mint.withValues(alpha: 0.7),
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.person_rounded,
-                              color: AppColors.mint,
-                              size: 42,
-                            ),
-                          ),
-                          Positioned(
-                            right: -2,
-                            bottom: -2,
-                            child: Container(
-                              width: 26,
-                              height: 26,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.mint,
-                                border: Border.all(
-                                  color: AppColors.backgroundBottom,
-                                  width: 2,
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.camera_alt_rounded,
-                                color: AppColors.card,
-                                size: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'سفيان محمد',
-                              textAlign: TextAlign.right,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            SizedBox(height: 6),
-                            Text(
-                              'sufyan@email.com',
-                              textAlign: TextAlign.right,
-                              style: TextStyle(
-                                color: AppColors.mint,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(height: 6),
-                            Text(
-                              'رقم الحساب: 1234 5678 9012',
-                              textAlign: TextAlign.right,
-                              style: TextStyle(
-                                color: AppColors.mutedText,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                profileAsync.when(
+                  data: (profile) => _buildProfileCard(profile.fullName,
+                      profile.email, profile.phone ?? ''),
+                  loading: () => _buildProfileCard('...', '...', '...'),
+                  error: (_, _) =>
+                      _buildProfileCard(user?.email ?? '', user?.email ?? '', ''),
                 ),
                 const SizedBox(height: 18),
-                const _SectionTitle(label: 'الحساب'),
+                const SettingsSectionTitle(label: 'الحساب'),
                 const SizedBox(height: 10),
-                _SectionCard(
+                SettingsSectionCard(
                   children: [
-                    _ActionTile(
+                    SettingsActionTile(
                       icon: Icons.manage_accounts_rounded,
                       title: 'تعديل البيانات الشخصية',
                       onTap: () {},
                     ),
-                    _ActionTile(
+                    SettingsActionTile(
                       icon: Icons.lock_outline_rounded,
                       title: 'تغيير كلمة المرور',
                       onTap: () {},
                     ),
-                    _ActionTile(
+                    SettingsActionTile(
                       icon: Icons.verified_user_outlined,
                       title: 'التحقق الثنائي',
                       onTap: () {},
                     ),
-                    _ActionTile(
+                    SettingsActionTile(
                       icon: Icons.phone_android_rounded,
                       title: 'إدارة الأجهزة',
                       onTap: () {},
@@ -187,17 +150,17 @@ class _SettingsPageViewState extends State<SettingsPageView> {
                   ],
                 ),
                 const SizedBox(height: 18),
-                const _SectionTitle(label: 'التفضيلات'),
+                const SettingsSectionTitle(label: 'التفضيلات'),
                 const SizedBox(height: 10),
-                _SectionCard(
+                SettingsSectionCard(
                   children: [
-                    _ActionTile(
+                    SettingsActionTile(
                       icon: Icons.notifications_outlined,
                       title: 'الإشعارات',
                       onTap: () {},
                     ),
-                    _LanguageTile(value: 'العربية', onTap: () {}),
-                    _SwitchTile(
+                    SettingsLanguageTile(value: 'العربية', onTap: () {}),
+                    SettingsSwitchTile(
                       title: 'الوضع الداكن',
                       icon: Icons.dark_mode_outlined,
                       value: _darkModeEnabled,
@@ -207,7 +170,7 @@ class _SettingsPageViewState extends State<SettingsPageView> {
                         });
                       },
                     ),
-                    _ActionTile(
+                    SettingsActionTile(
                       icon: Icons.attach_money_rounded,
                       title: 'العملات المفضلة',
                       onTap: () {},
@@ -216,21 +179,21 @@ class _SettingsPageViewState extends State<SettingsPageView> {
                   ],
                 ),
                 const SizedBox(height: 18),
-                const _SectionTitle(label: 'الدعم والمساعدة'),
+                const SettingsSectionTitle(label: 'الدعم والمساعدة'),
                 const SizedBox(height: 10),
-                _SectionCard(
+                SettingsSectionCard(
                   children: [
-                    _ActionTile(
+                    SettingsActionTile(
                       icon: Icons.help_outline_rounded,
                       title: 'مركز المساعدة',
                       onTap: () {},
                     ),
-                    _ActionTile(
+                    SettingsActionTile(
                       icon: Icons.headset_mic_outlined,
                       title: 'تواصل معنا',
                       onTap: () {},
                     ),
-                    _ActionTile(
+                    SettingsActionTile(
                       icon: Icons.info_outline_rounded,
                       title: 'عن التطبيق',
                       onTap: () {},
@@ -239,19 +202,22 @@ class _SettingsPageViewState extends State<SettingsPageView> {
                   ],
                 ),
                 const SizedBox(height: 18),
-                Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.danger),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'تسجيل الخروج',
-                      style: TextStyle(
-                        color: AppColors.danger,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                InkWell(
+                  onTap: _logout,
+                  child: Container(
+                    height: 52,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.danger),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'تسجيل الخروج',
+                        style: TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -263,167 +229,102 @@ class _SettingsPageViewState extends State<SettingsPageView> {
       ),
     );
   }
-}
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      textAlign: TextAlign.right,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 21,
-        fontWeight: FontWeight.w800,
-      ),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildProfileCard(String name, String email, String phone) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.card.withValues(alpha: 0.76),
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.card.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.cardBorder),
       ),
-      child: Column(children: children),
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.showDivider = true,
-  });
-
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool showDivider;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          onTap: onTap,
-          leading: Icon(icon, color: AppColors.mint, size: 24),
-          trailing: const Icon(Icons.chevron_left_rounded, color: Colors.white),
-          title: Text(
-            title,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        if (showDivider)
-          const Divider(height: 1, thickness: 1, color: Color(0x1A8BE3B4)),
-      ],
-    );
-  }
-}
-
-class _LanguageTile extends StatelessWidget {
-  const _LanguageTile({required this.value, required this.onTap});
-
-  final String value;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          onTap: onTap,
-          leading: const Icon(
-            Icons.language_rounded,
-            color: AppColors.mint,
-            size: 24,
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
+      child: Row(
+        textDirection: TextDirection.ltr,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
             children: [
-              Text(
-                value,
-                style: const TextStyle(
+              Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.backgroundBottom,
+                  border: Border.all(
+                    color: AppColors.mint.withValues(alpha: 0.7),
+                    width: 2,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.person_rounded,
                   color: AppColors.mint,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  size: 42,
                 ),
               ),
-              const SizedBox(width: 6),
-              const Icon(Icons.chevron_left_rounded, color: Colors.white),
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.mint,
+                    border: Border.all(
+                      color: AppColors.backgroundBottom,
+                      width: 2,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    color: AppColors.card,
+                    size: 14,
+                  ),
+                ),
+              ),
             ],
           ),
-          title: const Text(
-            'اللغة',
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  name,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  email,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: AppColors.mint,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (phone.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'رقم الهاتف: $phone',
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      color: AppColors.mutedText,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-        ),
-        const Divider(height: 1, thickness: 1, color: Color(0x1A8BE3B4)),
-      ],
-    );
-  }
-}
-
-class _SwitchTile extends StatelessWidget {
-  const _SwitchTile({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final IconData icon;
-  final String title;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          leading: Icon(icon, color: AppColors.mint, size: 24),
-          trailing: Switch.adaptive(
-            value: value,
-            activeColor: AppColors.mint,
-            onChanged: onChanged,
-          ),
-          title: Text(
-            title,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const Divider(height: 1, thickness: 1, color: Color(0x1A8BE3B4)),
-      ],
+        ],
+      ),
     );
   }
 }

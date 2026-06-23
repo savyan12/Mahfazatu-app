@@ -1,15 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/supabase/supabase_client.dart';
+import '../../providers/profile_provider.dart';
+import '../../providers/transaction_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../shared/widgets/app_background.dart';
 import 'home_widgets.dart';
 
-class HomePageView extends StatelessWidget {
+class HomePageView extends ConsumerWidget {
   const HomePageView({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bottomInset = MediaQuery.of(context).viewPadding.bottom;
     final bottomNavHeight = 104.0 + bottomInset;
+    final user = SupabaseService.I.auth.currentUser;
+
+    if (user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final userId = user.id;
+    final profileAsync = ref.watch(profileProvider(userId));
+    final balanceAsync = ref.watch(balanceProvider(userId));
+    final transactionsAsync = ref.watch(transactionsProvider(userId));
 
     return Scaffold(
       body: AppBackground.dark(
@@ -19,18 +34,36 @@ class HomePageView extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(28, 22, 28, bottomNavHeight + 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: const [
-                HomeHeader(),
-                SizedBox(height: 40),
-                BankAccountCard(),
-                SizedBox(height: 34),
-                CardCarouselIndicator(),
-                SizedBox(height: 24),
-                PointsBanner(),
-                SizedBox(height: 54),
-                QuickActionsRow(),
-                SizedBox(height: 48),
-                TransactionsSection(),
+              children: [
+                profileAsync.when(
+                  data: (profile) => HomeHeader(profile: profile),
+                  loading: () => const HomeHeader(),
+                  error: (_, _) => const HomeHeader(),
+                ),
+                const SizedBox(height: 40),
+                balanceAsync.when(
+                  data: (balance) => BankAccountCard(balance: balance),
+                  loading: () => const BankAccountCard(),
+                  error: (_, _) => const BankAccountCard(),
+                ),
+                const SizedBox(height: 34),
+                const CardCarouselIndicator(),
+                const SizedBox(height: 24),
+                profileAsync.when(
+                  data: (profile) =>
+                      PointsBanner(points: profile.rewardPoints),
+                  loading: () => const PointsBanner(),
+                  error: (_, _) => const PointsBanner(),
+                ),
+                const SizedBox(height: 54),
+                const QuickActionsRow(),
+                const SizedBox(height: 48),
+                transactionsAsync.when(
+                  data: (txns) =>
+                      TransactionsSection(transactions: txns.take(2).toList()),
+                  loading: () => const TransactionsSection(),
+                  error: (_, _) => const TransactionsSection(),
+                ),
               ],
             ),
           ),

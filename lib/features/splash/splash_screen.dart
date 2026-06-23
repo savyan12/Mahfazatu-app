@@ -4,9 +4,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/app_assets.dart';
+import '../../core/supabase/supabase_client.dart';
 import '../../shared/widgets/app_background.dart';
 import '../../shared/widgets/brand_widgets.dart';
 import '../auth/auth_screens.dart';
+import '../home/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -68,7 +70,12 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) {
         return;
       }
-      Navigator.of(context).pushReplacementNamed(LoginScreen.routeName);
+      final user = SupabaseService.I.auth.currentUser;
+      if (user != null) {
+        Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
+      } else {
+        Navigator.of(context).pushReplacementNamed(LoginScreen.routeName);
+      }
     });
   }
 

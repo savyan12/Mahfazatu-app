@@ -1,0 +1,1 @@
+enum TopupMethod { code, qr }

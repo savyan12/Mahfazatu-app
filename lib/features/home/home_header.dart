@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/profile_model.dart';
 import 'home_feature_page.dart';
 
 class HomeHeader extends StatelessWidget {
-  const HomeHeader({super.key});
+  final ProfileModel? profile;
+  const HomeHeader({this.profile, super.key});
 
   @override
   Widget build(BuildContext context) {
+    final greeting = _getGreeting();
+    final name = profile?.firstName ?? 'سفيان';
+
     return Row(
       textDirection: TextDirection.ltr,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -28,10 +33,10 @@ class HomeHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        const Text(
-          'مساء الخير،\nسفيان',
+        Text(
+          '$greeting،\n$name',
           textAlign: TextAlign.right,
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 25,
             fontWeight: FontWeight.w800,
@@ -40,5 +45,12 @@ class HomeHeader extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'صباح الخير';
+    if (hour < 17) return 'مساء الخير';
+    return 'مساء الخير';
   }
 }

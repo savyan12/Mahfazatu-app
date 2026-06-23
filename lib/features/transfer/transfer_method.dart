@@ -1,0 +1,1 @@
+enum TransferMethod { nfc, qr }

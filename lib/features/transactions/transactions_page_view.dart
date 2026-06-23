@@ -1,12 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/supabase/supabase_client.dart';
 import '../../core/theme/app_colors.dart';
+import '../../data/models/transaction_model.dart';
+import '../../providers/transaction_provider.dart';
+import 'filter_chip_label.dart';
+import 'summary_card.dart';
+import 'transaction_card.dart';
+import 'transaction_date_header.dart';
 
-class TransactionsPageView extends StatelessWidget {
+class TransactionsPageView extends ConsumerWidget {
   const TransactionsPageView({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = SupabaseService.I.auth.currentUser;
+    final userId = user?.id ?? '';
+    final transactionsAsync = ref.watch(transactionsProvider(userId));
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -77,101 +89,30 @@ class TransactionsPageView extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: const [
-                  _FilterChipLabel(label: 'الكل', active: true),
-                  _FilterChipLabel(label: 'شحن'),
-                  _FilterChipLabel(label: 'تحويل'),
-                  _FilterChipLabel(label: 'شراء'),
-                  _FilterChipLabel(label: 'استبدال نقاط'),
+                  FilterChipLabel(label: 'الكل', active: true),
+                  FilterChipLabel(label: 'شحن'),
+                  FilterChipLabel(label: 'تحويل'),
+                  FilterChipLabel(label: 'شراء'),
+                  FilterChipLabel(label: 'استبدال نقاط'),
                 ],
               ),
               const SizedBox(height: 18),
-              const _TransactionDateHeader(label: 'اليوم - 24 مايو 2024'),
-              const SizedBox(height: 12),
-              const _TransactionCard(
-                title: 'شحن محفظة',
-                subtitle: 'شحن الرصيد من بطاقة مدى',
-                amount: '+\$500.00',
-                time: '10:30 م',
-                icon: Icons.outbox_rounded,
-                positive: true,
-              ),
-              const SizedBox(height: 10),
-              const _TransactionCard(
-                title: 'استبدال نقاط',
-                subtitle: 'استبدال نقاط بمبلغ نقدي',
-                amount: '-100 نقطة',
-                time: '09:15 م',
-                icon: Icons.hexagon_outlined,
-                positive: true,
-              ),
-              const SizedBox(height: 10),
-              const _TransactionCard(
-                title: 'تحويل مالي',
-                subtitle: 'تحويل إلى حساب محمد',
-                amount: '-\$250.00',
-                time: '08:45 م',
-                icon: Icons.swap_horiz_rounded,
-                positive: false,
-              ),
-              const SizedBox(height: 10),
-              const _TransactionCard(
-                title: 'عملية شراء',
-                subtitle: 'شراء من متجر إلكتروني',
-                amount: '-\$120.00',
-                time: '07:20 م',
-                icon: Icons.shopping_cart_outlined,
-                positive: false,
-              ),
-              const SizedBox(height: 16),
-              const _TransactionDateHeader(label: 'أمس - 23 مايو 2024'),
-              const SizedBox(height: 12),
-              const _TransactionCard(
-                title: 'شحن محفظة',
-                subtitle: 'شحن عبر التحويل البنكي',
-                amount: '+\$300.00',
-                time: '11:40 م',
-                icon: Icons.outbox_rounded,
-                positive: true,
-              ),
-              const SizedBox(height: 10),
-              const _TransactionCard(
-                title: 'استبدال نقاط',
-                subtitle: 'استبدال نقاط مقابل نقدي',
-                amount: '-200 نقطة',
-                time: '06:30 م',
-                icon: Icons.hexagon_outlined,
-                positive: true,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: const [
-                  Expanded(
-                    child: _SummaryCard(
-                      title: 'إجمالي المصروف',
-                      value: '\$370.00',
-                      icon: Icons.arrow_downward_rounded,
-                      accent: AppColors.danger,
-                    ),
+              transactionsAsync.when(
+                data: (txns) => _buildTransactionList(txns),
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(),
                   ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: _SummaryCard(
-                      title: 'إجمالي الدخل',
-                      value: '\$800.00',
-                      icon: Icons.arrow_upward_rounded,
-                      accent: AppColors.mint,
-                    ),
+                ),
+                error: (_, _) => const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Text(
+                    'حدث خطأ في تحميل المعاملات',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.danger),
                   ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: _SummaryCard(
-                      title: 'عدد المعاملات',
-                      value: '12',
-                      icon: Icons.receipt_long_rounded,
-                      accent: AppColors.sky,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
@@ -179,234 +120,162 @@ class TransactionsPageView extends StatelessWidget {
       ),
     );
   }
-}
 
-class _TransactionDateHeader extends StatelessWidget {
-  const _TransactionDateHeader({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      textAlign: TextAlign.right,
-      style: const TextStyle(
-        color: AppColors.mutedText,
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-}
-
-class _FilterChipLabel extends StatelessWidget {
-  const _FilterChipLabel({required this.label, this.active = false});
-
-  final String label;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final backgroundColor = active ? AppColors.mint : Colors.transparent;
-    final foregroundColor = active ? AppColors.card : AppColors.mint;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.mint.withValues(alpha: 0.55)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: foregroundColor,
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
+  Widget _buildTransactionList(List<TransactionModel> txns) {
+    if (txns.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Text(
+          'لا توجد معاملات بعد',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.mutedText),
         ),
-      ),
-    );
-  }
-}
+      );
+    }
 
-class _TransactionCard extends StatelessWidget {
-  const _TransactionCard({
-    required this.title,
-    required this.subtitle,
-    required this.amount,
-    required this.time,
-    required this.icon,
-    required this.positive,
-  });
+    double totalExpense = 0;
+    double totalIncome = 0;
 
-  final String title;
-  final String subtitle;
-  final String amount;
-  final String time;
-  final IconData icon;
-  final bool positive;
+    final today = DateTime.now();
+    final todayStr = 'اليوم - ${today.day} ${_monthName(today.month)} ${today.year}';
+    final yesterday = today.subtract(const Duration(days: 1));
+    final yesterdayStr =
+        'أمس - ${yesterday.day} ${_monthName(yesterday.month)} ${yesterday.year}';
 
-  @override
-  Widget build(BuildContext context) {
-    final accent = positive ? AppColors.mint : AppColors.danger;
+    List<Widget> items = [];
+    List<TransactionModel> todayTxns = [];
+    List<TransactionModel> yesterdayTxns = [];
+    List<TransactionModel> olderTxns = [];
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.card.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Row(
+    for (final txn in txns) {
+      final isToday = _isSameDay(txn.createdAt, today);
+      final isYesterday = _isSameDay(txn.createdAt, yesterday);
+
+      if (isToday) {
+        todayTxns.add(txn);
+      } else if (isYesterday) {
+        yesterdayTxns.add(txn);
+      } else {
+        olderTxns.add(txn);
+      }
+
+      if (txn.type == TransactionType.topup) {
+        totalIncome += txn.amount;
+      } else {
+        totalExpense += txn.amount;
+      }
+    }
+
+    if (todayTxns.isNotEmpty) {
+      items.add(TransactionDateHeader(label: todayStr));
+      items.add(const SizedBox(height: 12));
+      for (final txn in todayTxns) {
+        items.add(_buildTransactionCard(txn));
+        items.add(const SizedBox(height: 10));
+      }
+    }
+
+    if (yesterdayTxns.isNotEmpty) {
+      items.add(TransactionDateHeader(label: yesterdayStr));
+      items.add(const SizedBox(height: 12));
+      for (final txn in yesterdayTxns) {
+        items.add(_buildTransactionCard(txn));
+        items.add(const SizedBox(height: 10));
+      }
+    }
+
+    if (olderTxns.isNotEmpty) {
+      items.add(const SizedBox(height: 16));
+      for (final txn in olderTxns) {
+        items.add(_buildTransactionCard(txn));
+        items.add(const SizedBox(height: 10));
+      }
+    }
+
+    items.add(const SizedBox(height: 16));
+    items.add(
+      Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.16),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: accent, size: 22),
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    color: AppColors.mutedText,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.card.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: AppColors.cardBorder),
-                      ),
-                      child: const Text(
-                        'مكتملة',
-                        style: TextStyle(
-                          color: AppColors.mint,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      time,
-                      style: const TextStyle(
-                        color: AppColors.mutedText,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            child: SummaryCard(
+              title: 'إجمالي المصروف',
+              value: '${totalExpense.toStringAsFixed(0)} LYD',
+              icon: Icons.arrow_downward_rounded,
+              accent: AppColors.danger,
             ),
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                amount,
-                textDirection: TextDirection.ltr,
-                style: TextStyle(
-                  color: accent,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: AppColors.mint,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white24),
-                ),
-              ),
-            ],
+          const SizedBox(width: 10),
+          Expanded(
+            child: SummaryCard(
+              title: 'إجمالي الدخل',
+              value: '${totalIncome.toStringAsFixed(0)} LYD',
+              icon: Icons.arrow_upward_rounded,
+              accent: AppColors.mint,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SummaryCard(
+              title: 'عدد المعاملات',
+              value: '${txns.length}',
+              icon: Icons.receipt_long_rounded,
+              accent: AppColors.sky,
+            ),
           ),
         ],
       ),
+    );
+
+    return Column(children: items);
+  }
+
+  Widget _buildTransactionCard(TransactionModel txn) {
+    final isPositive = txn.type == TransactionType.topup;
+    return TransactionCard(
+      title: _titleForType(txn.type),
+      subtitle: txn.description ?? '',
+      amount:
+          '${isPositive ? '+' : '-'} ${txn.amount.toStringAsFixed(0)} ${txn.currency}',
+      time: '${txn.createdAt.hour.toString().padLeft(2, '0')}:${txn.createdAt.minute.toString().padLeft(2, '0')}',
+      icon: _iconForType(txn.type),
+      positive: isPositive,
     );
   }
-}
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.accent,
-  });
+  String _titleForType(TransactionType type) {
+    switch (type) {
+      case TransactionType.topup:
+        return 'شحن محفظة';
+      case TransactionType.transfer:
+        return 'تحويل مالي';
+      case TransactionType.payment:
+        return 'عملية شراء';
+      case TransactionType.redeem:
+        return 'استبدال نقاط';
+    }
+  }
 
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color accent;
+  IconData _iconForType(TransactionType type) {
+    switch (type) {
+      case TransactionType.topup:
+        return Icons.outbox_rounded;
+      case TransactionType.transfer:
+        return Icons.swap_horiz_rounded;
+      case TransactionType.payment:
+        return Icons.shopping_cart_outlined;
+      case TransactionType.redeem:
+        return Icons.hexagon_outlined;
+    }
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 12, 10, 14),
-      decoration: BoxDecoration(
-        color: AppColors.card.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(icon, color: accent, size: 24),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: TextStyle(
-              color: accent,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.mutedText,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  String _monthName(int month) {
+    const names = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    return names[month - 1];
   }
 }

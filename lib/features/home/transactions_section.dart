@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../data/models/transaction_model.dart';
 import '../../shared/widgets/app_controls.dart';
 import '../transactions/transactions_screen.dart';
 
 class TransactionsSection extends StatelessWidget {
-  const TransactionsSection({super.key});
+  final List<TransactionModel> transactions;
+  const TransactionsSection({this.transactions = const [], super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,23 +34,53 @@ class TransactionsSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        const TransactionRow(
-          title: 'كافيه ديوان',
-          subtitle: 'أمس',
-          amount: '+ \$50.00',
-          positive: true,
-          icon: Icons.credit_card_rounded,
-        ),
-        const SizedBox(height: 12),
-        const TransactionRow(
-          title: 'متجر الأجهزة',
-          subtitle: 'اليوم',
-          amount: '- \$120.00',
-          positive: false,
-          icon: Icons.remove_rounded,
-        ),
+        if (transactions.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Text(
+              'لا توجد معاملات بعد',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.mutedText),
+            ),
+          )
+        else
+          ...transactions.map((txn) {
+            final isPositive = txn.type == TransactionType.topup;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: TransactionRow(
+                title: txn.description ?? txn.type.name,
+                subtitle: _formatDate(txn.createdAt),
+                amount:
+                    '${isPositive ? '+' : '-'} ${txn.amount.toStringAsFixed(0)} ${txn.currency}',
+                positive: isPositive,
+                icon: _iconForType(txn.type),
+              ),
+            );
+          }),
       ],
     );
+  }
+
+  IconData _iconForType(TransactionType type) {
+    switch (type) {
+      case TransactionType.topup:
+        return Icons.outbox_rounded;
+      case TransactionType.transfer:
+        return Icons.swap_horiz_rounded;
+      case TransactionType.payment:
+        return Icons.shopping_cart_outlined;
+      case TransactionType.redeem:
+        return Icons.hexagon_outlined;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inDays == 0) return 'اليوم';
+    if (diff.inDays == 1) return 'أمس';
+    return '${date.day}/${date.month}/${date.year}';
   }
 }
 

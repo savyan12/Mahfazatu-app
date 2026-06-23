@@ -4,10 +4,23 @@ import '../../core/app_assets.dart';
 import '../../core/theme/app_colors.dart';
 
 class BankAccountCard extends StatelessWidget {
-  const BankAccountCard({super.key});
+  final double balance;
+  final String cardSuffix;
+  final String cardholderName;
+  final String expiryDate;
+
+  const BankAccountCard({
+    this.balance = 10000,
+    this.cardSuffix = '4821',
+    this.cardholderName = 'سفيان',
+    this.expiryDate = '12/28',
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final formattedBalance = balance.toStringAsFixed(0);
+
     return AspectRatio(
       aspectRatio: 1683 / 935,
       child: ClipRRect(
@@ -31,9 +44,9 @@ class BankAccountCard extends StatelessWidget {
                       Positioned(
                         right: width * 0.07,
                         top: height * 0.48,
-                        child: const Text(
-                          r'$10,000',
-                          style: TextStyle(
+                        child: Text(
+                          '$formattedBalance LYD',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 21,
                             fontWeight: FontWeight.w800,
@@ -44,9 +57,9 @@ class BankAccountCard extends StatelessWidget {
                       Positioned(
                         left: width * 0.59,
                         bottom: height * 0.33,
-                        child: const Text(
-                          '4821',
-                          style: TextStyle(
+                        child: Text(
+                          cardSuffix,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -57,9 +70,9 @@ class BankAccountCard extends StatelessWidget {
                       Positioned(
                         left: width * 0.075,
                         bottom: height * 0.16,
-                        child: const Text(
-                          'سفيان',
-                          style: TextStyle(
+                        child: Text(
+                          cardholderName,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -69,11 +82,11 @@ class BankAccountCard extends StatelessWidget {
                       Positioned(
                         left: width * 0.41,
                         bottom: height * 0.15,
-                        child: const Row(
+                        child: Row(
                           textDirection: TextDirection.ltr,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
+                            const Text(
                               'VALID\nTHRU',
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -83,10 +96,10 @@ class BankAccountCard extends StatelessWidget {
                                 height: 0.92,
                               ),
                             ),
-                            SizedBox(width: 7),
+                            const SizedBox(width: 7),
                             Text(
-                              '12/28',
-                              style: TextStyle(
+                              expiryDate,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,

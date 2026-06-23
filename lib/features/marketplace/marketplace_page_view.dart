@@ -1,30 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../data/models/merchant_model.dart';
+import '../../providers/merchant_provider.dart';
+import 'marketplace_widgets.dart';
 
-class MarketplacePageView extends StatefulWidget {
+class MarketplacePageView extends ConsumerStatefulWidget {
   const MarketplacePageView({super.key});
 
   static const routeName = '/marketplace';
 
   @override
-  State<MarketplacePageView> createState() => _MarketplacePageViewState();
+  ConsumerState<MarketplacePageView> createState() =>
+      _MarketplacePageViewState();
 }
 
-class _MarketplacePageViewState extends State<MarketplacePageView> {
+class _MarketplacePageViewState extends ConsumerState<MarketplacePageView> {
   static const LatLng _tripoliFallback = LatLng(32.8872, 13.1913);
+  late final MapController _mapController;
   LatLng _center = _tripoliFallback;
   bool _loadingLocation = true;
   String _locationLabel = 'ليبيا - طرابلس';
   String _locationStatus = 'جارٍ تحديد الموقع الحالي...';
+  String? _selectedCategory;
 
   @override
   void initState() {
     super.initState();
+    _mapController = MapController();
     _loadCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCurrentLocation() async {
@@ -47,16 +61,20 @@ class _MarketplacePageViewState extends State<MarketplacePageView> {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       if (!mounted) return;
+      final loc = LatLng(position.latitude, position.longitude);
       setState(() {
-        _center = LatLng(position.latitude, position.longitude);
+        _center = loc;
         _loadingLocation = false;
         _locationLabel = 'الموقع الحالي';
         _locationStatus = 'تم تحديد موقعك الحالي على الخريطة.';
       });
+      _mapController.move(loc, 14.5);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -70,6 +88,10 @@ class _MarketplacePageViewState extends State<MarketplacePageView> {
 
   @override
   Widget build(BuildContext context) {
+    final merchantsAsync = _selectedCategory == null
+        ? ref.watch(merchantsProvider)
+        : ref.watch(merchantsByCategoryProvider(_selectedCategory!));
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -163,11 +185,12 @@ class _MarketplacePageViewState extends State<MarketplacePageView> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18),
                   child: FlutterMap(
-                    options: const MapOptions(
-                      initialCenter: LatLng(32.8872, 13.1913),
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _tripoliFallback,
                       initialZoom: 13.2,
-                      interactionOptions: InteractionOptions(
-                        flags: InteractiveFlag.none,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.all,
                       ),
                     ),
                     children: [
@@ -183,38 +206,14 @@ class _MarketplacePageViewState extends State<MarketplacePageView> {
                             width: 40,
                             height: 40,
                             child: _loadingLocation
-                                ? const _MapPin(
+                                ? const MerchantMapPin(
                                     icon: Icons.location_searching_rounded,
                                     accent: AppColors.sky,
                                   )
-                                : const _MapPin(
+                                : const MerchantMapPin(
                                     icon: Icons.my_location_rounded,
                                     accent: AppColors.sky,
                                   ),
-                          ),
-                          Marker(
-                            point: LatLng(
-                              _center.latitude + 0.004,
-                              _center.longitude - 0.006,
-                            ),
-                            width: 40,
-                            height: 40,
-                            child: _MapPin(
-                              icon: Icons.shopping_bag_outlined,
-                              accent: AppColors.mint,
-                            ),
-                          ),
-                          Marker(
-                            point: LatLng(
-                              _center.latitude - 0.004,
-                              _center.longitude + 0.006,
-                            ),
-                            width: 40,
-                            height: 40,
-                            child: _MapPin(
-                              icon: Icons.local_cafe_outlined,
-                              accent: AppColors.mint,
-                            ),
                           ),
                         ],
                       ),
@@ -225,33 +224,43 @@ class _MarketplacePageViewState extends State<MarketplacePageView> {
               const SizedBox(height: 14),
               Row(
                 textDirection: TextDirection.ltr,
-                children: const [
+                children: [
                   Expanded(
-                    child: _CategoryTile(
+                    child: MarketplaceCategoryTile(
                       label: 'الكل',
                       icon: Icons.grid_view_rounded,
-                      active: true,
+                      active: _selectedCategory == null,
+                      onTap: () => setState(() => _selectedCategory = null),
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: _CategoryTile(
+                    child: MarketplaceCategoryTile(
                       label: 'تسوق',
                       icon: Icons.shopping_bag_outlined,
+                      active: _selectedCategory == 'shopping',
+                      onTap: () =>
+                          setState(() => _selectedCategory = 'shopping'),
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: _CategoryTile(
+                    child: MarketplaceCategoryTile(
                       label: 'مطاعم',
                       icon: Icons.restaurant_outlined,
+                      active: _selectedCategory == 'restaurant',
+                      onTap: () =>
+                          setState(() => _selectedCategory = 'restaurant'),
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: _CategoryTile(
+                    child: MarketplaceCategoryTile(
                       label: 'خدمات',
                       icon: Icons.work_outline_rounded,
+                      active: _selectedCategory == 'services',
+                      onTap: () =>
+                          setState(() => _selectedCategory = 'services'),
                     ),
                   ),
                 ],
@@ -267,44 +276,23 @@ class _MarketplacePageViewState extends State<MarketplacePageView> {
                 ),
               ),
               const SizedBox(height: 12),
-              _StoreCard(
-                name: 'مقهى رواء',
-                category: 'مقاهي',
-                rating: '4.8',
-                distance:
-                    '${_distanceTo(_center.latitude + 0.001, _center.longitude + 0.001).toStringAsFixed(1)} كم',
-                icon: Icons.local_cafe,
-                accent: AppColors.card,
-              ),
-              const SizedBox(height: 10),
-              _StoreCard(
-                name: 'سوبر ماركت المدينة',
-                category: 'تسوق',
-                rating: '4.6',
-                distance:
-                    '${_distanceTo(_center.latitude + 0.003, _center.longitude - 0.002).toStringAsFixed(1)} كم',
-                icon: Icons.shopping_cart,
-                accent: AppColors.teal,
-              ),
-              const SizedBox(height: 10),
-              _StoreCard(
-                name: 'مطعم بيت الشاورما',
-                category: 'مطاعم',
-                rating: '4.5',
-                distance:
-                    '${_distanceTo(_center.latitude - 0.004, _center.longitude + 0.004).toStringAsFixed(1)} كم',
-                icon: Icons.restaurant,
-                accent: AppColors.danger,
-              ),
-              const SizedBox(height: 10),
-              _StoreCard(
-                name: 'عيادة النهدي',
-                category: 'خدمات',
-                rating: '4.7',
-                distance:
-                    '${_distanceTo(_center.latitude - 0.006, _center.longitude - 0.003).toStringAsFixed(1)} كم',
-                icon: Icons.favorite,
-                accent: AppColors.sky,
+              merchantsAsync.when(
+                data: (merchants) =>
+                    _buildMerchantList(merchants),
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+                error: (_, _) => const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Text(
+                    'حدث خطأ في تحميل المتاجر',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
               Container(
@@ -331,6 +319,73 @@ class _MarketplacePageViewState extends State<MarketplacePageView> {
     );
   }
 
+  Widget _buildMerchantList(List<MerchantModel> merchants) {
+    if (merchants.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Text(
+          'لا توجد متاجر متاحة',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.mutedText),
+        ),
+      );
+    }
+
+    return Column(
+      children: merchants.map((m) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: MarketplaceStoreCard(
+            name: m.name,
+            category: _categoryName(m.category),
+            rating: m.rating.toStringAsFixed(1),
+            distance:
+                '${_distanceTo(m.latitude, m.longitude).toStringAsFixed(1)} كم',
+            icon: _iconFromString(m.iconName),
+            accent: _colorFromHex(m.accentColor),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _categoryName(MerchantCategory cat) {
+    switch (cat) {
+      case MerchantCategory.cafe:
+        return 'مقهى';
+      case MerchantCategory.shopping:
+        return 'تسوق';
+      case MerchantCategory.restaurant:
+        return 'مطعم';
+      case MerchantCategory.services:
+        return 'خدمات';
+    }
+  }
+
+  IconData _iconFromString(String name) {
+    switch (name) {
+      case 'local_cafe':
+        return Icons.local_cafe_outlined;
+      case 'shopping_cart':
+        return Icons.shopping_cart_outlined;
+      case 'restaurant':
+        return Icons.restaurant_outlined;
+      case 'local_hospital':
+        return Icons.local_hospital_outlined;
+      case 'devices':
+        return Icons.devices_outlined;
+      case 'nightlight':
+        return Icons.nightlight_outlined;
+      default:
+        return Icons.store_outlined;
+    }
+  }
+
+  Color _colorFromHex(String hex) {
+    hex = hex.replaceAll('#', '');
+    return Color(int.parse('FF$hex', radix: 16));
+  }
+
   double _distanceTo(double latitude, double longitude) {
     return Geolocator.distanceBetween(
           _center.latitude,
@@ -339,166 +394,5 @@ class _MarketplacePageViewState extends State<MarketplacePageView> {
           longitude,
         ) /
         1000;
-  }
-}
-
-class _MapPin extends StatelessWidget {
-  const _MapPin({required this.icon, required this.accent});
-
-  final IconData icon;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Icon(icon, color: AppColors.backgroundBottom, size: 18),
-    );
-  }
-}
-
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({
-    required this.label,
-    required this.icon,
-    this.active = false,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final backgroundColor = active ? AppColors.mint : Colors.transparent;
-    final foregroundColor = active ? AppColors.card : AppColors.mint;
-
-    return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.mint.withValues(alpha: 0.55)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: foregroundColor, size: 18),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: TextStyle(
-              color: foregroundColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StoreCard extends StatelessWidget {
-  const _StoreCard({
-    required this.name,
-    required this.category,
-    required this.rating,
-    required this.distance,
-    required this.icon,
-    required this.accent,
-  });
-
-  final String name;
-  final String category;
-  final String rating;
-  final String distance;
-  final IconData icon;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.card.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 62,
-            height: 62,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: accent, size: 30),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  name,
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  category,
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    color: AppColors.mutedText,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      rating,
-                      style: const TextStyle(
-                        color: AppColors.mint,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      distance,
-                      style: const TextStyle(
-                        color: AppColors.mutedText,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Icon(Icons.chevron_left_rounded, color: Colors.white),
-        ],
-      ),
-    );
   }
 }
